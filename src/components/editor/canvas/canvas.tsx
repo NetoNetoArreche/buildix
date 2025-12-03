@@ -735,7 +735,7 @@ export function Canvas() {
             transformOrigin: "center center",
           }}
         >
-          {frames.map((frame, index) => renderCanvasModeFrame(frame, index))}
+          {frames.map((frame: FrameConfig, index: number) => renderCanvasModeFrame(frame, index))}
         </div>
       ) : (
         // Normal Editor Mode
