@@ -69,7 +69,7 @@ export function EditorHeader({ projectId, projectName }: EditorHeaderProps) {
     useEditorStore();
   const { openModal } = useUIStore();
   const { openPublishModal } = useCommunityStore();
-  const { updateProject } = useProject(projectId);
+  const { updateProject } = useProject();
   const { isOpen: canvasModeOpen, toggleOpen: toggleCanvasMode } = useCanvasModeStore();
 
   // Get HTML with background assets injected
