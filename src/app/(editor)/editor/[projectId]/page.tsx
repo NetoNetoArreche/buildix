@@ -24,7 +24,7 @@ export default function EditorPage() {
   const { leftPanelOpen, rightPanelOpen, activeModal, closeModal } = useUIStore();
   const { reset, addBackgroundAsset, setViewMode, selectElement, setSelectedElementData, backgroundAssets, htmlContent, currentPage, showLayersPanel, setShowLayersPanel } = useEditorStore();
   // Get canvas mode settings getter
-  const getSettings = useCanvasModeStore((state) => state.getSettings);
+  const getSettings = useCanvasModeStore((state: { getSettings: () => Record<string, unknown> }) => state.getSettings);
   const { project, isLoading, error, loadProject, createProject, savePage } = useProject();
   const [isInitialized, setIsInitialized] = useState(false);
   const isCreatingRef = useRef(false); // Prevent duplicate project creation
