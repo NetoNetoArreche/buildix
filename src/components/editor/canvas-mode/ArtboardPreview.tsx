@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { type Artboard, useArtboardsStore } from "@/stores/artboardsStore";
-import { useCanvasModeStore, shadowStyles, brightnessStyles } from "@/stores/canvasModeStore";
+import { useCanvasModeStore, shadowStyles, brightnessStyles, type ShadowType, type BrightnessType } from "@/stores/canvasModeStore";
 import { ArtboardHeader } from "./ArtboardHeader";
 import { cn } from "@/lib/utils";
 
@@ -68,8 +68,8 @@ export function ArtboardPreview({ artboard, html, isSelected }: ArtboardPreviewP
         style={{
           borderRadius: `${cornerRadius}px`,
           border: ringWidth > 0 ? `${ringWidth}px solid ${borderColor}` : undefined,
-          boxShadow: shadowStyles[shadow],
-          filter: brightnessStyles[brightness] !== "none" ? brightnessStyles[brightness] : undefined,
+          boxShadow: shadowStyles[shadow as ShadowType],
+          filter: brightnessStyles[brightness as BrightnessType] !== "none" ? brightnessStyles[brightness as BrightnessType] : undefined,
         }}
         onClick={() => selectArtboard(artboard.id)}
       >
