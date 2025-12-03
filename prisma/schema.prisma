@@ -5,10 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = "postgresql://postgres:Taboao@localhost:5432/buildix?schema=public"
-  // NOTE: Hardcoded URL to avoid conflict with system-level DATABASE_URL env var
-  // pointing to ai_web_builder. In production, remove this and use env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // NextAuth Account model - for OAuth providers
