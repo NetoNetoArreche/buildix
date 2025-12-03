@@ -1,0 +1,11 @@
+export { SpacingSection } from "./SpacingSection";
+export { SizeSection } from "./SizeSection";
+export { TypographySection } from "./TypographySection";
+export { BackgroundSection } from "./BackgroundSection";
+export { BackgroundAssetSection } from "./BackgroundAssetSection";
+export { BorderSection } from "./BorderSection";
+export { PositionSection } from "./PositionSection";
+export { EffectsSection } from "./EffectsSection";
+export { TransformsSection } from "./TransformsSection";
+export { IconSection } from "./IconSection";
+export { CanvasModeSection } from "./CanvasModeSection";

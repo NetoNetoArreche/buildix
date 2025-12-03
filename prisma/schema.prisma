@@ -1,0 +1,333 @@
+// Prisma schema for Buildix - AI-powered landing page builder
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = "postgresql://postgres:Taboao@localhost:5432/buildix?schema=public"
+  // NOTE: Hardcoded URL to avoid conflict with system-level DATABASE_URL env var
+  // pointing to ai_web_builder. In production, remove this and use env("DATABASE_URL")
+}
+
+// NextAuth Account model - for OAuth providers
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth Session model
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// NextAuth VerificationToken model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// User model - with authentication fields
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  password      String?   // For email/password login
+  avatar        String?
+  role          String    @default("user") // "user" | "admin"
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Public profile fields
+  displayName    String?
+  bio            String?   @db.Text
+  website        String?
+
+  // Follower counts (denormalized for performance)
+  followerCount  Int       @default(0)
+  followingCount Int       @default(0)
+
+  // Relations
+  accounts Account[]
+  sessions Session[]
+  projects Project[]
+  images   UserImage[]
+
+  // Community relations
+  projectLikes    ProjectLike[]
+  projectComments ProjectComment[]
+  followers       UserFollow[]     @relation("Following")
+  following       UserFollow[]     @relation("Followers")
+
+  @@map("users")
+}
+
+// Project model - main container for pages
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  thumbnail   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Optional user relation (for future auth)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  pages            Page[]
+  chatMessages     ChatMessage[]
+  publishedProject PublishedProject?
+
+  @@map("projects")
+}
+
+// Page model - individual pages within a project
+model Page {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String
+  htmlContent      String   @db.Text
+  cssContent       String?  @db.Text
+  backgroundAssets Json?    // Array of BackgroundAsset objects
+  canvasSettings   Json?    // Canvas mode settings (zoom, frames, appearance, etc.)
+  isHome           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Version history for undo/redo persistence
+  versions PageVersion[]
+
+  @@unique([projectId, slug])
+  @@map("pages")
+}
+
+// PageVersion - for storing version history
+model PageVersion {
+  id          String   @id @default(cuid())
+  htmlContent String   @db.Text
+  cssContent  String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  pageId String
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@map("page_versions")
+}
+
+// ChatMessage - for AI chat history
+model ChatMessage {
+  id        String   @id @default(cuid())
+  role      String   // "user" | "assistant"
+  content   String   @db.Text
+  model     String?  // "gemini" | "claude"
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+// Template - pre-built templates for quick start
+model Template {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // "landing", "portfolio", "ecommerce", etc.
+  thumbnail   String?
+  htmlContent String   @db.Text
+  cssContent  String?  @db.Text
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("templates")
+}
+
+// UserImage - user uploaded images stored in S3
+model UserImage {
+  id        String   @id @default(cuid())
+  url       String   // S3 URL
+  key       String   // S3 key for deletion
+  filename  String   // Original filename
+  mimeType  String   // image/png, image/jpeg, etc.
+  size      Int      // File size in bytes
+  width     Int?     // Image width
+  height    Int?     // Image height
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_images")
+}
+
+// BuildixGalleryImage - curated images for the Buildix gallery (public)
+model BuildixGalleryImage {
+  id          String   @id @default(cuid())
+  url         String   // Image URL (S3 or CDN)
+  thumb       String?  // Thumbnail URL
+  alt         String?  // Alt text
+  category    String   // "abstract", "nature", "architecture", "portrait", "landscape", "minimal"
+  color       String?  // Dominant color for filtering
+  aspectRatio String?  // "landscape", "portrait", "square"
+  tags        String[] // Array of tags for search
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("buildix_gallery_images")
+}
+
+// UIComponent - dynamic UI components managed by admin
+model UIComponent {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // "hero", "feature", "cta", "pricing", "testimonial", "footer", "navbar", "card", "form", "gallery"
+  code        String   @db.Text
+  tags        String[]
+  charCount   Int
+  isPro       Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ui_components")
+}
+
+// CodeSnippet - dynamic code snippets managed by admin
+model CodeSnippet {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // "css", "js", "html", "mixed"
+  code        String   @db.Text
+  tags        String[]
+  charCount   Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("code_snippets")
+}
+
+// ============================================
+// COMMUNITY / TEMPLATES MODELS
+// ============================================
+
+// PublishedProject - project published to the community
+model PublishedProject {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Public identification
+  slug String @unique // URL-friendly: meu-projeto-abc123
+
+  // Publication metadata
+  title       String
+  description String?  @db.Text
+  category    String // landing, portfolio, ecommerce, blog, agency, startup
+  tags        String[] // custom tags by author
+  thumbnail   String? // preview image (800x600)
+
+  // Template type
+  isPro      Boolean @default(false) // PRO templates (admin only)
+  isOfficial Boolean @default(false) // Official Buildix templates
+
+  // Settings
+  allowRemix  Boolean @default(true)
+  isPublished Boolean @default(true)
+
+  // Counters (denormalized for performance)
+  viewCount  Int @default(0)
+  likeCount  Int @default(0)
+  remixCount Int @default(0)
+
+  // Timestamps
+  publishedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  likes    ProjectLike[]
+  comments ProjectComment[]
+
+  @@index([category])
+  @@index([isPublished, publishedAt])
+  @@index([likeCount])
+  @@index([viewCount])
+  @@index([remixCount])
+  @@map("published_projects")
+}
+
+// ProjectLike - likes on published projects
+model ProjectLike {
+  id                 String           @id @default(cuid())
+  publishedProjectId String
+  publishedProject   PublishedProject @relation(fields: [publishedProjectId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@unique([publishedProjectId, userId])
+  @@map("project_likes")
+}
+
+// ProjectComment - comments on published projects
+model ProjectComment {
+  id                 String           @id @default(cuid())
+  publishedProjectId String
+  publishedProject   PublishedProject @relation(fields: [publishedProjectId], references: [id], onDelete: Cascade)
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content            String           @db.Text
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([publishedProjectId, createdAt])
+  @@map("project_comments")
+}
+
+// UserFollow - user following relationships
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String // who is following
+  follower    User     @relation("Followers", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String // who is being followed
+  following   User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("user_follows")
+}
