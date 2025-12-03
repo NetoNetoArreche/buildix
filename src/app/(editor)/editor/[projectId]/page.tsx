@@ -221,7 +221,7 @@ export default function EditorPage() {
             elementId: elementId,
             attributes: {},
             computedStyles: {},
-            inlineStyles: targetElement.style.cssText || "",
+            inlineStyles: {},
           });
         }
       }, 100);
