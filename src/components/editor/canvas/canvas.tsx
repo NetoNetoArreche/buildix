@@ -8,6 +8,8 @@ import {
   brightnessStyles,
   devicePresets,
   type FrameConfig,
+  type ShadowType,
+  type BrightnessType,
 } from "@/stores/canvasModeStore";
 import { cn } from "@/lib/utils";
 import { CanvasFrame, type AddContentAfterEvent } from "./canvas-frame";
@@ -552,8 +554,8 @@ export function Canvas() {
             width: scaledWidth,
             height: scaledHeight,
             borderRadius: `${cornerRadius}px`,
-            boxShadow: isDraggingThisFrame ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : shadowStyles[shadow],
-            filter: brightnessStyles[brightness] !== "none" ? brightnessStyles[brightness] : undefined,
+            boxShadow: isDraggingThisFrame ? "0 25px 50px -12px rgba(0, 0, 0, 0.5)" : shadowStyles[shadow as ShadowType],
+            filter: brightnessStyles[brightness as BrightnessType] !== "none" ? brightnessStyles[brightness as BrightnessType] : undefined,
           }}
         >
           {/* Iframe with scaled content - ALWAYS INTERACTIVE */}
