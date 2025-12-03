@@ -9,7 +9,7 @@ export type { AIModel };
 interface GenerateOptions {
   prompt: string;
   model: AIModel;
-  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference";
+  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "insertAfter";
   currentHtml?: string;
   elementHtml?: string;
   onStream?: (chunk: string) => void;

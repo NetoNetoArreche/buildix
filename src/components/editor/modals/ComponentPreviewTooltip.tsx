@@ -14,7 +14,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<NodeJS.Timeout>(null);
 
   useEffect(() => {
     setMounted(true);

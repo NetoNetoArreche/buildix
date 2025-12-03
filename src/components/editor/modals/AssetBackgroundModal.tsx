@@ -123,7 +123,7 @@ export function AssetBackgroundModal({
     setAsset({
       ...defaultBackgroundAsset,
       id: asset.id || generateId(),
-      type: activeTab,
+      type: activeTab === "design" ? "embed" : activeTab,
       src: asset.src || "",
     });
   }, [activeTab, asset.id, asset.src]);
@@ -136,7 +136,7 @@ export function AssetBackgroundModal({
       ...defaultBackgroundAsset,
       ...asset,
       id: asset.id || generateId(),
-      type: asset.type || activeTab,
+      type: asset.type || (activeTab === "design" ? "embed" : activeTab),
       src: asset.src,
     } as BackgroundAsset;
 

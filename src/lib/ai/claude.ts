@@ -53,9 +53,10 @@ export async function* streamWithClaude(
   const client = getClient();
 
   // Build content array - include image if provided
+  type MediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
   type ContentBlock =
     | { type: "text"; text: string }
-    | { type: "image"; source: { type: "base64"; media_type: string; data: string } };
+    | { type: "image"; source: { type: "base64"; media_type: MediaType; data: string } };
 
   const content: ContentBlock[] = [];
 
@@ -65,7 +66,7 @@ export async function* streamWithClaude(
       type: "image",
       source: {
         type: "base64",
-        media_type: referenceImage.mimeType,
+        media_type: referenceImage.mimeType as MediaType,
         data: referenceImage.data,
       },
     });

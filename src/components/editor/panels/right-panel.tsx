@@ -2071,7 +2071,7 @@ function PromptTab({
       {promptBuilderOpen && (
         <PromptBuilder
           onGenerate={(generatedPrompt) => {
-            setPrompt((prev) => prev + (prev ? "\n" : "") + generatedPrompt);
+            setPrompt(prompt + (prompt ? "\n" : "") + generatedPrompt);
             setPromptBuilderOpen(false);
           }}
           onClose={() => setPromptBuilderOpen(false)}

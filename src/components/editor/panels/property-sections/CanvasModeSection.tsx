@@ -131,6 +131,7 @@ export function CanvasModeSection() {
     resetPan,
     setBackgroundType,
     setBackgroundAsset,
+    setBackgroundValue,
     setOverlayAsset,
   } = useCanvasModeStore();
 

@@ -12,6 +12,8 @@ interface CollapsibleSectionProps {
   className?: string;
   /** Se true, a seção será aberta automaticamente. Tem precedência sobre defaultOpen. */
   hasActiveProperties?: boolean;
+  /** Badge counter to display */
+  badge?: number;
 }
 
 export function CollapsibleSection({
@@ -21,6 +23,7 @@ export function CollapsibleSection({
   defaultOpen = true,
   className,
   hasActiveProperties,
+  badge,
 }: CollapsibleSectionProps) {
   // Se hasActiveProperties é definido, usamos ele para controlar o estado inicial
   // Se não definido, usamos defaultOpen
@@ -54,6 +57,11 @@ export function CollapsibleSection({
         <div className="flex items-center gap-2">
           {icon && <span className="text-muted-foreground">{icon}</span>}
           <span>{title}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
+              {badge}
+            </span>
+          )}
         </div>
         <ChevronDown
           className={cn(

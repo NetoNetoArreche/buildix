@@ -43,21 +43,23 @@ export function extractDesignContext(html: string): DesignContext {
   };
 
   // Extract all classes from HTML
-  const classMatches = html.match(/class="([^"]+)"/g) || [];
+  const classMatches: string[] = html.match(/class="([^"]+)"/g) || [];
   const classSet = new Set<string>();
 
-  classMatches.forEach(match => {
-    const classes = match.replace('class="', '').replace('"', '').split(/\s+/);
-    classes.forEach(c => {
+  classMatches.forEach((match: string) => {
+    const classValue = match.replace('class="', '').replace('"', '');
+    const classes = classValue.split(/\s+/);
+    classes.forEach((c: string) => {
       if (c.trim()) classSet.add(c.trim());
     });
   });
 
   // Count occurrences for prioritization
   const classCount: Record<string, number> = {};
-  classMatches.forEach(match => {
-    const classes = match.replace('class="', '').replace('"', '').split(/\s+/);
-    classes.forEach(c => {
+  classMatches.forEach((match: string) => {
+    const classValue = match.replace('class="', '').replace('"', '');
+    const classes = classValue.split(/\s+/);
+    classes.forEach((c: string) => {
       if (c.trim()) {
         classCount[c.trim()] = (classCount[c.trim()] || 0) + 1;
       }
