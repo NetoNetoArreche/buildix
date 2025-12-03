@@ -77,7 +77,7 @@ export async function POST(
             slug: page.slug,
             htmlContent: page.htmlContent,
             cssContent: page.cssContent,
-            backgroundAssets: page.backgroundAssets,
+            backgroundAssets: page.backgroundAssets ?? undefined,
             isHome: page.isHome,
           })),
         },
