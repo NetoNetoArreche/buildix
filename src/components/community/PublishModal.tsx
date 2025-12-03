@@ -286,13 +286,13 @@ export function PublishModal() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 rounded-lg border bg-muted/50 p-4">
-              <div className="flex items-center gap-3">
-                <LinkIcon className="h-5 w-5 text-muted-foreground" />
-                <code className="flex-1 text-sm truncate">
+            <div className="mt-4 rounded-lg border bg-muted/50 p-4 overflow-hidden">
+              <div className="flex items-center gap-3 min-w-0">
+                <LinkIcon className="h-5 w-5 text-muted-foreground shrink-0" />
+                <code className="flex-1 text-sm truncate min-w-0">
                   {window.location.origin}{publishedUrl}
                 </code>
-                <Button variant="outline" size="sm" onClick={handleCopyUrl}>
+                <Button variant="outline" size="sm" onClick={handleCopyUrl} className="shrink-0">
                   Copy
                 </Button>
               </div>
