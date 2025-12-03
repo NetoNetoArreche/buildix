@@ -291,9 +291,9 @@ export default function CommunityPage() {
                   state.setPagination({ ...state.pagination, page: state.pagination.page + 1 });
                   state.fetchTemplates(false);
                 }}
-                disabled={isLoading}
+                disabled={storeIsLoading}
               >
-                {isLoading ? "Loading..." : "Load More"}
+                {storeIsLoading ? "Loading..." : "Load More"}
               </Button>
             </div>
           )}
