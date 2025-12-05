@@ -1,0 +1,13 @@
+{
+  "functions": {
+    "src/app/api/admin/gallery/upload/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/screenshot/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/screenshot/iframe/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}

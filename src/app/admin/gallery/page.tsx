@@ -170,20 +170,104 @@ export default function AdminGalleryPage() {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Compress image to reduce file size (max 4MB for Vercel limit)
+  const compressImage = async (file: File, maxSizeMB: number = 3.5): Promise<File> => {
+    // If file is already small enough, return as-is
+    if (file.size <= maxSizeMB * 1024 * 1024) {
+      return file;
+    }
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let { width, height } = img;
+
+          // Reduce dimensions if image is very large
+          const maxDimension = 2400;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = (height / width) * maxDimension;
+              width = maxDimension;
+            } else {
+              width = (width / height) * maxDimension;
+              height = maxDimension;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Try different quality levels to get under the size limit
+          const tryCompress = (quality: number) => {
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  resolve(file);
+                  return;
+                }
+
+                if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.3) {
+                  const compressedFile = new File([blob], file.name, {
+                    type: "image/jpeg",
+                    lastModified: Date.now(),
+                  });
+                  resolve(compressedFile);
+                } else {
+                  // Try again with lower quality
+                  tryCompress(quality - 0.1);
+                }
+              },
+              "image/jpeg",
+              quality
+            );
+          };
+
+          tryCompress(0.85);
+        };
+        img.onerror = () => resolve(file);
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => resolve(file);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0) return;
 
     setIsUploading(true);
     setUploadProgress(0);
 
+    // Compress images before upload
+    const compressedFiles: File[] = [];
+    for (let i = 0; i < selectedFiles.length; i++) {
+      setUploadProgress(Math.round((i / selectedFiles.length) * 30)); // 0-30% for compression
+      const compressed = await compressImage(selectedFiles[i]);
+      compressedFiles.push(compressed);
+    }
+
+    setUploadProgress(35);
+
     const formData = new FormData();
-    selectedFiles.forEach(file => {
+    compressedFiles.forEach(file => {
       formData.append("files", file);
     });
     formData.append("category", uploadCategory);
     formData.append("tags", uploadTags);
 
     try {
+      setUploadProgress(40);
       const response = await fetch("/api/admin/gallery/upload", {
         method: "POST",
         body: formData,

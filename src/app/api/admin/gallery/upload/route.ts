@@ -4,6 +4,17 @@ import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin";
 
+// Configure max body size for file uploads (50MB)
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+// For Next.js App Router - increase body size limit
+export const maxDuration = 60; // 60 seconds timeout
+export const dynamic = "force-dynamic";
+
 // Initialize S3 client
 const getS3Client = () => {
   if (
