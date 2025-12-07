@@ -458,51 +458,125 @@ Remember: Output ONLY the HTML code, starting with <!DOCTYPE html>`,
 // Prompt builder options
 export const PROMPT_BUILDER_OPTIONS = {
   layoutTypes: [
-    { value: "hero", label: "Hero", description: "Full-screen hero section with headline and CTA" },
-    { value: "features", label: "Features", description: "Feature grid showcasing product benefits" },
-    { value: "pricing", label: "Pricing", description: "Pricing table with multiple tiers" },
-    { value: "testimonials", label: "Testimonials", description: "Customer testimonials and social proof" },
-    { value: "portfolio", label: "Portfolio", description: "Project gallery with images" },
-    { value: "contact", label: "Contact", description: "Contact form with information" },
-    { value: "blog", label: "Blog", description: "Blog posts listing" },
-    { value: "landing", label: "Full Landing", description: "Complete landing page with multiple sections" },
+    { value: "hero", label: "Hero", description: "Full-screen hero section with headline and CTA", icon: "layout" },
+    { value: "features", label: "Features", description: "Feature grid showcasing product benefits", icon: "grid" },
+    { value: "onboarding", label: "Onboarding", description: "User onboarding flow screens", icon: "users" },
+    { value: "docs", label: "Docs", description: "Documentation or help pages", icon: "file-text" },
+    { value: "updates", label: "Updates", description: "Changelog or updates feed", icon: "bell" },
+    { value: "portfolio", label: "Portfolio", description: "Project gallery with images", icon: "image" },
+    { value: "pricing", label: "Pricing", description: "Pricing table with multiple tiers", icon: "credit-card" },
+    { value: "landing", label: "Full Landing", description: "Complete landing page with multiple sections", icon: "layers" },
   ],
 
   layoutConfigs: [
-    { value: "card", label: "Card", description: "Content in card containers" },
-    { value: "list", label: "List", description: "Vertical list layout" },
-    { value: "grid-2", label: "2 Columns", description: "Two column grid" },
-    { value: "grid-3", label: "3 Columns", description: "Three column grid" },
-    { value: "grid-4", label: "4 Columns", description: "Four column grid" },
-    { value: "sidebar-left", label: "Sidebar Left", description: "Content with left sidebar" },
-    { value: "sidebar-right", label: "Sidebar Right", description: "Content with right sidebar" },
-    { value: "centered", label: "Centered", description: "Centered content layout" },
+    { value: "card", label: "Card", description: "Content in card containers", icon: "square" },
+    { value: "list", label: "List", description: "Vertical list layout", icon: "list" },
+    { value: "grid-2x2", label: "2-2 Square", description: "2x2 square grid", icon: "grid-2x2" },
+    { value: "table", label: "Table", description: "Tabular data layout", icon: "table" },
+    { value: "sidebar-left", label: "Sidebar Left", description: "Content with left sidebar", icon: "sidebar" },
+    { value: "sidebar-right", label: "Sidebar Right", description: "Content with right sidebar", icon: "sidebar-right" },
+    { value: "centered", label: "Centered", description: "Centered content layout", icon: "align-center" },
+    { value: "masonry", label: "Masonry", description: "Pinterest-style masonry grid", icon: "layout-grid" },
+  ],
+
+  framing: [
+    { value: "full-screen", label: "Full Screen", description: "Edge-to-edge layout" },
+    { value: "card", label: "Card", description: "Content in a card container" },
+    { value: "browser", label: "Browser", description: "Browser window mockup frame" },
+    { value: "mac-app", label: "Mac App", description: "macOS window frame style" },
+    { value: "clay-web", label: "Clay Web", description: "3D clay-style mockup" },
   ],
 
   styles: [
     { value: "flat", label: "Flat", description: "Clean, flat design without shadows" },
-    { value: "elevated", label: "Elevated", description: "Cards with shadows and depth" },
+    { value: "outline", label: "Outline", description: "Outlined elements with borders" },
+    { value: "minimal", label: "Minimalist", description: "Ultra-minimal with lots of whitespace" },
     { value: "glass", label: "Glass", description: "Glassmorphism with blur effects" },
-    { value: "minimal", label: "Minimal", description: "Ultra-minimal with lots of whitespace" },
-    { value: "bold", label: "Bold", description: "Strong colors and typography" },
-    { value: "gradient", label: "Gradient", description: "Gradient backgrounds and accents" },
+    { value: "ios", label: "iOS", description: "Apple iOS design language" },
+    { value: "material", label: "Material", description: "Google Material Design style" },
   ],
 
   themes: [
-    { value: "dark", label: "Dark", description: "Dark background with light text" },
-    { value: "light", label: "Light", description: "Light background with dark text" },
+    { value: "dark", label: "Dark Mode", description: "Dark background with light text" },
+    { value: "light", label: "Light Mode", description: "Light background with dark text" },
   ],
 
   accentColors: [
-    { value: "violet", label: "Violet", tailwind: "violet-500" },
-    { value: "blue", label: "Blue", tailwind: "blue-500" },
-    { value: "cyan", label: "Cyan", tailwind: "cyan-500" },
-    { value: "green", label: "Green", tailwind: "green-500" },
-    { value: "yellow", label: "Yellow", tailwind: "yellow-500" },
-    { value: "orange", label: "Orange", tailwind: "orange-500" },
-    { value: "red", label: "Red", tailwind: "red-500" },
-    { value: "pink", label: "Pink", tailwind: "pink-500" },
-    { value: "indigo", label: "Indigo", tailwind: "indigo-500" },
+    { value: "violet", label: "Violet", tailwind: "violet-500", hex: "#8b5cf6" },
+    { value: "blue", label: "Blue", tailwind: "blue-500", hex: "#3b82f6" },
+    { value: "cyan", label: "Cyan", tailwind: "cyan-500", hex: "#06b6d4" },
+    { value: "green", label: "Green", tailwind: "green-500", hex: "#22c55e" },
+    { value: "yellow", label: "Yellow", tailwind: "yellow-500", hex: "#eab308" },
+    { value: "orange", label: "Orange", tailwind: "orange-500", hex: "#f97316" },
+    { value: "red", label: "Red", tailwind: "red-500", hex: "#ef4444" },
+    { value: "pink", label: "Pink", tailwind: "pink-500", hex: "#ec4899" },
+    { value: "indigo", label: "Indigo", tailwind: "indigo-500", hex: "#6366f1" },
+  ],
+
+  backgroundColors: [
+    { value: "zinc-950", label: "Dark", hex: "#09090b" },
+    { value: "zinc-900", label: "Charcoal", hex: "#18181b" },
+    { value: "slate-900", label: "Slate", hex: "#0f172a" },
+    { value: "neutral-900", label: "Neutral", hex: "#171717" },
+    { value: "white", label: "White", hex: "#ffffff" },
+    { value: "zinc-50", label: "Light Gray", hex: "#fafafa" },
+  ],
+
+  borderColors: [
+    { value: "transparent", label: "None", hex: "transparent" },
+    { value: "zinc-800", label: "Subtle", hex: "#27272a" },
+    { value: "zinc-700", label: "Medium", hex: "#3f3f46" },
+    { value: "accent", label: "Accent", hex: "accent" },
+  ],
+
+  shadows: [
+    { value: "none", label: "None" },
+    { value: "sm", label: "Small" },
+    { value: "md", label: "Medium" },
+    { value: "lg", label: "Large" },
+    { value: "xl", label: "Extra Large" },
+    { value: "glow", label: "Glow" },
+  ],
+
+  typefaceTypes: [
+    { value: "sans", label: "Sans" },
+    { value: "serif", label: "Serif" },
+    { value: "mono", label: "Monospace" },
+    { value: "display", label: "Display" },
+  ],
+
+  headingFonts: [
+    { value: "inter", label: "Inter" },
+    { value: "geist", label: "Geist" },
+    { value: "manrope", label: "Manrope" },
+    { value: "plus-jakarta", label: "Plus Jakarta Sans" },
+    { value: "space-grotesk", label: "Space Grotesk" },
+    { value: "cal-sans", label: "Cal Sans" },
+  ],
+
+  animations: [
+    { value: "none", label: "None", description: "No animation" },
+    { value: "fade", label: "Fade", description: "Fade in/out effects" },
+    { value: "slide", label: "Slide", description: "Slide in from edges" },
+    { value: "scale", label: "Scale", description: "Scale up/down effects" },
+    { value: "rotate", label: "Rotate", description: "Rotation animations" },
+    { value: "blur", label: "Blur", description: "Blur to focus effects" },
+    { value: "3d", label: "3D", description: "3D transform effects" },
+  ],
+
+  generatedPrompts: [
+    { id: "saas-hero", label: "SaaS Hero Section", prompt: "Create a modern SaaS landing page hero with gradient text, floating UI elements, and a prominent CTA button" },
+    { id: "feature-grid", label: "Feature Grid with Icons", prompt: "Design a 3-column feature grid with icon cards, hover effects, and descriptive text" },
+    { id: "pricing-table", label: "Pricing Comparison Table", prompt: "Build a pricing table with 3 tiers, popular badge, feature comparison, and toggle for monthly/yearly" },
+    { id: "testimonial-carousel", label: "Testimonial Carousel", prompt: "Create a testimonial section with user avatars, quotes, company logos, and smooth transitions" },
+    { id: "cta-section", label: "Call-to-Action Section", prompt: "Design an eye-catching CTA section with gradient background, compelling headline, and dual buttons" },
+    { id: "footer-complex", label: "Complex Footer", prompt: "Build a comprehensive footer with multiple columns, newsletter signup, social links, and legal links" },
+    { id: "stats-counter", label: "Animated Stats Counter", prompt: "Create a statistics section with animated counting numbers, icons, and subtle animations" },
+    { id: "faq-accordion", label: "FAQ Accordion", prompt: "Design an FAQ section with expandable accordion items, smooth animations, and search functionality" },
+    { id: "team-grid", label: "Team Members Grid", prompt: "Build a team section with profile cards, social links, and hover effects" },
+    { id: "integration-logos", label: "Integration Logos Grid", prompt: "Create an integrations section with partner/tool logos in a responsive grid with hover effects" },
+    { id: "blog-cards", label: "Blog Post Cards", prompt: "Design blog post cards with featured images, categories, read time, and author info" },
+    { id: "newsletter-signup", label: "Newsletter Signup", prompt: "Create an elegant newsletter signup section with email input, privacy notice, and confirmation feedback" },
   ],
 };
 
@@ -510,9 +584,16 @@ export const PROMPT_BUILDER_OPTIONS = {
 export function buildPromptFromOptions(options: {
   layoutType: string;
   layoutConfig: string;
+  framing?: string;
   style: string;
   theme: string;
   accentColor: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  shadow?: string;
+  typefaceType?: string;
+  headingFont?: string;
+  animation?: string;
   additionalInstructions?: string;
 }): string {
   const parts: string[] = [];
@@ -531,21 +612,52 @@ export function buildPromptFromOptions(options: {
     parts.push(`with ${layoutConfig.label.toLowerCase()} configuration`);
   }
 
+  const framing = PROMPT_BUILDER_OPTIONS.framing.find((f) => f.value === options.framing);
+  if (framing && options.framing !== "full-screen") {
+    parts.push(`using ${framing.label.toLowerCase()} framing`);
+  }
+
   const style = PROMPT_BUILDER_OPTIONS.styles.find((s) => s.value === options.style);
   if (style) {
-    parts.push(`using ${style.label.toLowerCase()} visual style`);
+    parts.push(`in ${style.label.toLowerCase()} visual style`);
   }
 
   const theme = PROMPT_BUILDER_OPTIONS.themes.find((t) => t.value === options.theme);
   if (theme) {
-    parts.push(`in ${theme.label.toLowerCase()} mode`);
+    parts.push(`with ${theme.value} theme`);
   }
 
   const accentColor = PROMPT_BUILDER_OPTIONS.accentColors.find(
     (c) => c.value === options.accentColor
   );
   if (accentColor) {
-    parts.push(`with ${accentColor.label.toLowerCase()} as the accent color`);
+    parts.push(`${accentColor.label.toLowerCase()} accent color`);
+  }
+
+  const backgroundColor = PROMPT_BUILDER_OPTIONS.backgroundColors.find(
+    (c) => c.value === options.backgroundColor
+  );
+  if (backgroundColor) {
+    parts.push(`${backgroundColor.label.toLowerCase()} background`);
+  }
+
+  const shadow = PROMPT_BUILDER_OPTIONS.shadows.find((s) => s.value === options.shadow);
+  if (shadow && options.shadow !== "none") {
+    parts.push(`${shadow.label.toLowerCase()} shadows`);
+  }
+
+  const headingFont = PROMPT_BUILDER_OPTIONS.headingFonts.find(
+    (f) => f.value === options.headingFont
+  );
+  if (headingFont) {
+    parts.push(`${headingFont.label} font for headings`);
+  }
+
+  const animation = PROMPT_BUILDER_OPTIONS.animations.find(
+    (a) => a.value === options.animation
+  );
+  if (animation && options.animation !== "none") {
+    parts.push(`${animation.label.toLowerCase()} animations`);
   }
 
   let prompt = parts.join(", ") + ".";

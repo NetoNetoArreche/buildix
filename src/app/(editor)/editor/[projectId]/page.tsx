@@ -8,6 +8,7 @@ import { RightPanel } from "@/components/editor/panels/right-panel";
 import { Canvas } from "@/components/editor/canvas/canvas";
 import { AssetBackgroundModal } from "@/components/editor/modals/AssetBackgroundModal";
 import { ColorsModal } from "@/components/editor/modals/ColorsModal";
+import { FontPanel } from "@/components/editor/font-panel";
 import { LayersPanel } from "@/components/editor/panels/layers-panel/LayersPanel";
 import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore } from "@/stores/editorStore";
@@ -302,6 +303,11 @@ export default function EditorPage() {
         open={activeModal === "colors"}
         onOpenChange={(open) => !open && closeModal()}
       />
+
+      {/* Font Selection Panel */}
+      {activeModal === "fonts" && (
+        <FontPanel onClose={closeModal} />
+      )}
     </div>
   );
 }
