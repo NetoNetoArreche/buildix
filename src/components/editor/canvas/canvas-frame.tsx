@@ -650,7 +650,8 @@ export function CanvasFrame({
         return { width: "1080px", height: "1080px", minHeight: "1080px" };
       case "instagram-carousel":
         // Width is auto for horizontal scroll, height includes body padding (p-8 = 32px top + bottom)
-        return { width: "auto", height: "1414px", minHeight: "1414px", minWidth: "5500px" }; // 1350 + 64 padding
+        // Max 10 slides: 10 × 1080px + 9 × 32px (gap-8) + 64px (p-8 padding) = 11152px
+        return { width: "auto", height: "1414px", minHeight: "1414px", minWidth: "11200px" }; // 1350 + 64 padding
       case "instagram-story":
         return { width: "1080px", height: "1920px", minHeight: "1920px" };
       default:
