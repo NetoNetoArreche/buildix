@@ -50,11 +50,24 @@ export function useProject(): UseProjectReturn {
       const data = await response.json();
       setProject(data);
 
+      // Check if there's a pending Figma import - if so, don't set page content
+      // The LeftPanel will handle loading the Figma HTML
+      const hasPendingFigmaImport = typeof window !== "undefined" && sessionStorage.getItem("buildix-figma-import");
+
       // Set the home page as current page (this also loads backgroundAssets via setCurrentPage)
       const homePage = data.pages.find((p: Page) => p.isHome) || data.pages[0];
       if (homePage) {
-        console.log("[useProject] Setting home page, backgroundAssets:", homePage.backgroundAssets);
-        setCurrentPage(homePage);
+        console.log("[useProject] Setting home page, backgroundAssets:", homePage.backgroundAssets, "hasPendingFigmaImport:", !!hasPendingFigmaImport);
+
+        if (hasPendingFigmaImport) {
+          // If there's a pending Figma import, set the page but don't overwrite htmlContent
+          // Create a modified page with empty content so setCurrentPage doesn't overwrite
+          const pageForFigma = { ...homePage, htmlContent: "" };
+          setCurrentPage(pageForFigma);
+        } else {
+          setCurrentPage(homePage);
+        }
+
         // Load canvas settings if available
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const pageWithSettings = homePage as any;

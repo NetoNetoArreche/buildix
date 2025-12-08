@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Wand2, ArrowRight, Zap, Layout, Palette, Bot, ChevronDown, Square, Layers, Smartphone, Loader2, AtSign, ImagePlus, X, FolderOpen } from "lucide-react";
+import { Sparkles, Wand2, ArrowRight, Zap, Layout, Palette, Bot, ChevronDown, Square, Layers, Smartphone, Loader2, AtSign, ImagePlus, X, FolderOpen, Figma } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PromptBuilder } from "@/components/prompt/prompt-builder";
 import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal";
+import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ export default function CreatePage() {
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(true);
   const [isSnippetModalOpen, setIsSnippetModalOpen] = useState(false);
+  const [isFigmaModalOpen, setIsFigmaModalOpen] = useState(false);
   const [selectedSnippets, setSelectedSnippets] = useState<SelectedSnippet[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([]);
   const [referenceImage, setReferenceImage] = useState<{
@@ -282,6 +284,22 @@ export default function CreatePage() {
     setPrompt(promptText);
   };
 
+  const handleFigmaImport = (result: { html: string; nodeName: string; fileName: string; nodeId: string }) => {
+    // Store the imported HTML in sessionStorage for the editor to pick up
+    sessionStorage.setItem("buildix-figma-import", JSON.stringify({
+      html: result.html,
+      nodeName: result.nodeName,
+      fileName: result.fileName,
+    }));
+
+    // Clear any pending prompts
+    sessionStorage.removeItem("buildix-pending-prompt");
+    sessionStorage.removeItem("buildix-pending-reference-image");
+
+    // Redirect to the editor
+    router.push("/editor/new");
+  };
+
   const handlePromptBuilderGenerate = (generatedPrompt: string) => {
     setPrompt(generatedPrompt);
     setShowPromptBuilder(false);
@@ -472,6 +490,21 @@ export default function CreatePage() {
                 onChange={handleImageUpload}
               />
 
+              {/* Figma Import Button */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => setIsFigmaModalOpen(true)}
+                  >
+                    <Figma className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Importar do Figma</TooltipContent>
+              </Tooltip>
+
               <span className="hidden sm:inline text-xs text-muted-foreground">
                 Press ⌘ + Enter to generate
               </span>
@@ -580,6 +613,13 @@ export default function CreatePage() {
         onOpenChange={setIsSnippetModalOpen}
         onSelectSnippet={handleSelectSnippet}
         onSelectComponent={handleSelectComponent}
+      />
+
+      {/* Figma Import Modal */}
+      <FigmaImportModal
+        open={isFigmaModalOpen}
+        onOpenChange={setIsFigmaModalOpen}
+        onImport={handleFigmaImport}
       />
     </div>
   );

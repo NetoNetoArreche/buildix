@@ -9,6 +9,8 @@ import { Canvas } from "@/components/editor/canvas/canvas";
 import { AssetBackgroundModal } from "@/components/editor/modals/AssetBackgroundModal";
 import { ColorsModal } from "@/components/editor/modals/ColorsModal";
 import { FontPanel } from "@/components/editor/font-panel";
+import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
+import { FigmaExportModal } from "@/components/editor/modals/FigmaExportModal";
 import { LayersPanel } from "@/components/editor/panels/layers-panel/LayersPanel";
 import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore } from "@/stores/editorStore";
@@ -308,6 +310,18 @@ export default function EditorPage() {
       {activeModal === "fonts" && (
         <FontPanel onClose={closeModal} />
       )}
+
+      {/* Figma Import Modal */}
+      <FigmaImportModal
+        open={activeModal === "figmaImport"}
+        onOpenChange={(open) => !open && closeModal()}
+      />
+
+      {/* Figma Export Modal */}
+      <FigmaExportModal
+        open={activeModal === "figmaExport"}
+        onOpenChange={(open) => !open && closeModal()}
+      />
     </div>
   );
 }

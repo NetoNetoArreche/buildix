@@ -71,6 +71,12 @@ model User {
   followerCount  Int       @default(0)
   followingCount Int       @default(0)
 
+  // Figma OAuth integration
+  figmaAccessToken  String?   @map("figma_access_token") @db.Text
+  figmaRefreshToken String?   @map("figma_refresh_token") @db.Text
+  figmaTokenExpiry  DateTime? @map("figma_token_expiry")
+  figmaUserId       String?   @map("figma_user_id") // Figma user ID for reference
+
   // Relations
   accounts Account[]
   sessions Session[]

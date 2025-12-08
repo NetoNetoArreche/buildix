@@ -12,6 +12,9 @@ type ModalType =
   | "settings"
   | "newProject"
   | "deleteConfirm"
+  | "figmaImport"
+  | "figmaExport"
+  | "figmaTokens"
   | null;
 
 type PanelType = "left" | "right";

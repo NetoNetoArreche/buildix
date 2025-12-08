@@ -28,6 +28,9 @@ import {
   Camera,
   Layers,
   LayoutGrid,
+  Upload,
+  FileUp,
+  Figma,
 } from "lucide-react";
 import { toPng, toBlob } from "html-to-image";
 import JSZip from "jszip";
@@ -508,7 +511,7 @@ export function EditorHeader({ projectId, projectName }: EditorHeaderProps) {
               Export
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="max-h-[400px] overflow-y-auto">
             <DropdownMenuItem onClick={handleCopyHTML}>
               {copied ? (
                 <>
@@ -526,6 +529,26 @@ export function EditorHeader({ projectId, projectName }: EditorHeaderProps) {
               <FileDown className="mr-2 h-4 w-4" />
               Download HTML
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => openModal("figmaExport")}>
+              <FileUp className="mr-2 h-4 w-4 text-[#a259ff]" />
+              Export to Figma
+            </DropdownMenuItem>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuItem
+                  disabled
+                  className="opacity-50 cursor-not-allowed"
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  <Upload className="mr-2 h-4 w-4 text-[#0acf83]/50" />
+                  Import from Figma
+                </DropdownMenuItem>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                Em breve disponivel
+              </TooltipContent>
+            </Tooltip>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleExportAsImage} disabled={isExporting}>
               {isExporting ? (
