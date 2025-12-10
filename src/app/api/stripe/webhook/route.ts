@@ -14,6 +14,12 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
   const priceId = subscription.items.data[0]?.price.id;
   const userId = subscription.metadata.userId;
 
+  // Type assertion for subscription fields that may not be in the type definition
+  const subscriptionData = subscription as Stripe.Subscription & {
+    current_period_start: number;
+    current_period_end: number;
+  };
+
   // Find user by stripe customer ID or metadata
   let user = await prisma.subscription.findFirst({
     where: {
@@ -76,8 +82,8 @@ async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
       stripePriceId: priceId,
       plan: plan,
       status: status,
-      currentPeriodStart: new Date(subscription.current_period_start * 1000),
-      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      currentPeriodStart: new Date(subscriptionData.current_period_start * 1000),
+      currentPeriodEnd: new Date(subscriptionData.current_period_end * 1000),
       cancelAtPeriodEnd: subscription.cancel_at_period_end,
     },
   });
