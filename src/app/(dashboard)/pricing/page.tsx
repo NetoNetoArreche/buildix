@@ -112,7 +112,7 @@ const featureCategories = [
     name: "Recursos",
     features: [
       {
-        name: "Componentes Profissionais",
+        name: "Componentes e Templates PRO",
         FREE: false,
         PRO: true,
         MAX: true,
