@@ -59,13 +59,13 @@ import { useCanvasModeStore } from "@/stores/canvasModeStore";
 import { useProject } from "@/hooks/useProject";
 import { generateThumbnail } from "@/lib/thumbnail";
 import { cn } from "@/lib/utils";
-import type { ViewMode, DeviceMode } from "@/types";
-import type { Page } from "@prisma/client";
+import type { ViewMode, DeviceMode, Page } from "@/types";
+import type { Page as PrismaPage } from "@prisma/client";
 
 interface EditorHeaderProps {
   projectId: string;
   projectName?: string;
-  pages?: Page[];
+  pages?: PrismaPage[];
 }
 
 export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProps) {
@@ -297,7 +297,7 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
             {pages?.map((page) => (
               <DropdownMenuItem
                 key={page.id}
-                onClick={() => setCurrentPage(page)}
+                onClick={() => setCurrentPage({ ...page, order: 0, cssContent: page.cssContent || undefined } as Page)}
                 className={cn(
                   currentPage?.id === page.id && "bg-accent"
                 )}
