@@ -12,6 +12,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
   const [isHovered, setIsHovered] = useState(false);
   const [isPreviewHovered, setIsPreviewHovered] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -28,6 +29,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
 
   const calculatePosition = useCallback((element: HTMLElement) => {
     const rect = element.getBoundingClientRect();
+    setTriggerRect(rect);
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
@@ -73,13 +75,13 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
 
   const handleMouseLeave = useCallback(() => {
     clearTimeout(timeoutRef.current);
-    // Delay para permitir que o mouse chegue ao preview
+    // Delay maior para permitir que o mouse chegue ao preview
     closeTimeoutRef.current = setTimeout(() => {
       setIsHovered(false);
-    }, 150);
+    }, 300);
   }, []);
 
-  const handlePreviewMouseEnter = useCallback(() => {
+  const handleBridgeOrPreviewEnter = useCallback(() => {
     clearTimeout(closeTimeoutRef.current);
     setIsPreviewHovered(true);
   }, []);
@@ -89,7 +91,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
     // Pequeno delay para verificar se voltou ao trigger
     closeTimeoutRef.current = setTimeout(() => {
       setIsHovered(false);
-    }, 100);
+    }, 150);
   }, []);
 
   useEffect(() => {
@@ -136,41 +138,88 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
     }
   }, [showPreview, code]);
 
-  const previewContent = showPreview && mounted ? (
-    <div
-      className="fixed z-[9999] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-      style={{
-        left: position.x,
+  // Calcular posição da ponte invisível
+  const getBridgeStyle = () => {
+    if (!triggerRect) return null;
+
+    const previewWidth = 400;
+    const previewHeight = 280;
+    const viewportWidth = window.innerWidth;
+
+    // Verificar se preview está à direita ou à esquerda
+    const isRight = triggerRect.right + previewWidth + 20 < viewportWidth;
+
+    if (isRight) {
+      // Ponte à direita do trigger
+      return {
+        position: 'fixed' as const,
+        left: triggerRect.right,
         top: position.y,
-        width: 400,
-        height: 280,
-      }}
-      onMouseEnter={handlePreviewMouseEnter}
-      onMouseLeave={handlePreviewMouseLeave}
-    >
-      {/* Header */}
-      <div className="h-7 bg-zinc-800 border-b border-zinc-700 flex items-center px-3 gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-        <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-        <span className="text-[10px] text-zinc-500 ml-2">Preview</span>
-      </div>
-      {/* Iframe Container */}
-      <div className="relative overflow-hidden" style={{ height: 253 }}>
-        <iframe
-          ref={iframeRef}
-          className="absolute top-0 left-0 origin-top-left bg-zinc-950"
-          style={{
-            width: 1440,
-            height: 900,
-            transform: "scale(0.278)",
-            border: "none",
-          }}
-          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-          title="Component Preview"
+        width: position.x - triggerRect.right,
+        height: previewHeight,
+        zIndex: 9998,
+      };
+    } else {
+      // Ponte à esquerda do trigger
+      return {
+        position: 'fixed' as const,
+        left: position.x + previewWidth,
+        top: position.y,
+        width: triggerRect.left - (position.x + previewWidth),
+        height: previewHeight,
+        zIndex: 9998,
+      };
+    }
+  };
+
+  const bridgeStyle = getBridgeStyle();
+
+  const portalContent = showPreview && mounted ? (
+    <>
+      {/* Ponte invisível para facilitar transição do mouse */}
+      {bridgeStyle && bridgeStyle.width > 0 && (
+        <div
+          style={bridgeStyle}
+          onMouseEnter={handleBridgeOrPreviewEnter}
+          onMouseLeave={handlePreviewMouseLeave}
         />
+      )}
+      {/* Preview */}
+      <div
+        className="fixed z-[9999] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        style={{
+          left: position.x,
+          top: position.y,
+          width: 400,
+          height: 280,
+        }}
+        onMouseEnter={handleBridgeOrPreviewEnter}
+        onMouseLeave={handlePreviewMouseLeave}
+      >
+        {/* Header */}
+        <div className="h-7 bg-zinc-800 border-b border-zinc-700 flex items-center px-3 gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
+          <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+          <span className="text-[10px] text-zinc-500 ml-2">Preview</span>
+        </div>
+        {/* Iframe Container */}
+        <div className="relative overflow-hidden" style={{ height: 253 }}>
+          <iframe
+            ref={iframeRef}
+            className="absolute top-0 left-0 origin-top-left bg-zinc-950"
+            style={{
+              width: 1440,
+              height: 900,
+              transform: "scale(0.278)",
+              border: "none",
+            }}
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+            title="Component Preview"
+          />
+        </div>
       </div>
-    </div>
+    </>
   ) : null;
 
   return (
@@ -181,7 +230,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
       className="w-full"
     >
       {children}
-      {mounted && previewContent && createPortal(previewContent, document.body)}
+      {mounted && portalContent && createPortal(portalContent, document.body)}
     </div>
   );
 }

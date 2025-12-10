@@ -24,6 +24,8 @@ import {
   Heart,
   Shuffle,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { ComponentPreviewTooltip } from "./ComponentPreviewTooltip";
 import type { TemplateWithAuthor, TemplateCategory } from "@/types/community";
@@ -49,6 +51,19 @@ interface DbComponent {
   charCount: number;
   isPro: boolean;
 }
+
+interface DbAsset {
+  id: string;
+  name: string;
+  description: string | null;
+  url: string;
+  category: string;
+  tags: string[];
+  type: string;
+  isPro: boolean;
+}
+
+type AssetCategory = "all" | "icon" | "image" | "illustration" | "background" | "logo";
 
 interface CodeSnippetsModalProps {
   open: boolean;
@@ -80,6 +95,15 @@ const TEMPLATE_CATEGORIES: { value: TemplateCategory | "all"; label: string }[] 
   { value: "startup", label: "Startup" },
   { value: "saas", label: "SaaS" },
   { value: "personal", label: "Personal" },
+];
+
+const ASSET_CATEGORIES: { value: AssetCategory; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "icon", label: "Icons" },
+  { value: "image", label: "Images" },
+  { value: "illustration", label: "Illustrations" },
+  { value: "background", label: "Backgrounds" },
+  { value: "logo", label: "Logos" },
 ];
 
 // Cache for template HTML content
@@ -143,17 +167,21 @@ export function CodeSnippetsModal({
   onSelectTemplate,
 }: CodeSnippetsModalProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("snippets");
+  const [activeTab, setActiveTab] = useState("components");
   const [componentCategory, setComponentCategory] = useState<ComponentCategory | "all">("all");
   const [templateCategory, setTemplateCategory] = useState<TemplateCategory | "all">("all");
+  const [assetCategory, setAssetCategory] = useState<AssetCategory>("all");
+  const [copiedAssetId, setCopiedAssetId] = useState<string | null>(null);
 
   // Database resources
   const [dbSnippets, setDbSnippets] = useState<DbSnippet[]>([]);
   const [dbComponents, setDbComponents] = useState<DbComponent[]>([]);
   const [templates, setTemplates] = useState<TemplateWithAuthor[]>([]);
+  const [dbAssets, setDbAssets] = useState<DbAsset[]>([]);
   const [loadingSnippets, setLoadingSnippets] = useState(false);
   const [loadingComponents, setLoadingComponents] = useState(false);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [loadingAssets, setLoadingAssets] = useState(false);
 
   // Fetch database resources when modal opens
   useEffect(() => {
@@ -193,6 +221,18 @@ export function CodeSnippetsModal({
         })
         .catch(console.error)
         .finally(() => setLoadingTemplates(false));
+
+      // Fetch assets
+      setLoadingAssets(true);
+      fetch("/api/assets")
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.assets) {
+            setDbAssets(data.assets);
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoadingAssets(false));
     }
   }, [open]);
 
@@ -275,6 +315,49 @@ export function CodeSnippetsModal({
 
     return filtered;
   }, [searchQuery, templateCategory, templates]);
+
+  const filteredAssets = useMemo(() => {
+    let filtered = dbAssets;
+
+    if (assetCategory !== "all") {
+      filtered = filtered.filter((a) => a.category === assetCategory);
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (a) =>
+          a.name.toLowerCase().includes(query) ||
+          a.description?.toLowerCase().includes(query) ||
+          a.tags.some((tag) => tag.toLowerCase().includes(query))
+      );
+    }
+
+    return filtered;
+  }, [searchQuery, assetCategory, dbAssets]);
+
+  const handleCopyAssetUrl = async (asset: DbAsset) => {
+    await navigator.clipboard.writeText(asset.url);
+    setCopiedAssetId(asset.id);
+    setTimeout(() => setCopiedAssetId(null), 2000);
+  };
+
+  const getAssetCategoryColor = (category: string) => {
+    switch (category) {
+      case "icon":
+        return "bg-violet-500/20 text-violet-400";
+      case "image":
+        return "bg-blue-500/20 text-blue-400";
+      case "illustration":
+        return "bg-green-500/20 text-green-400";
+      case "background":
+        return "bg-yellow-500/20 text-yellow-400";
+      case "logo":
+        return "bg-pink-500/20 text-pink-400";
+      default:
+        return "bg-muted text-muted-foreground";
+    }
+  };
 
   const getComponentCategoryColor = (category: ComponentCategory) => {
     switch (category) {
@@ -627,13 +710,104 @@ export function CodeSnippetsModal({
           </TabsContent>
 
           <TabsContent value="assets" className="mt-4 flex-1">
-            <div className="h-[400px] flex flex-col items-center justify-center text-muted-foreground">
-              <Image className="h-12 w-12 mb-3 opacity-50" />
-              <p className="text-sm font-medium">Assets Coming Soon</p>
-              <p className="text-xs mt-1 text-center max-w-[250px]">
-                Asset library will be available in a future update
-              </p>
+            <div className="flex gap-2 mb-4 flex-wrap">
+              {ASSET_CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  onClick={() => setAssetCategory(cat.value)}
+                  className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                    assetCategory === cat.value
+                      ? "bg-[hsl(var(--buildix-primary))] text-white"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
+            <ScrollArea className="h-[350px]">
+              {loadingAssets ? (
+                <div className="flex items-center justify-center h-[200px] text-muted-foreground">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                  <p className="text-sm">Loading assets...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pr-4">
+                  {filteredAssets.map((asset) => (
+                    <div
+                      key={asset.id}
+                      className="flex flex-col rounded-lg border border-border/50 hover:border-[hsl(var(--buildix-primary))] transition-colors overflow-hidden group"
+                    >
+                      {/* Preview */}
+                      <div className="relative w-full h-24 bg-muted/50 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={asset.url}
+                          alt={asset.name}
+                          className="max-w-full max-h-full object-contain p-2"
+                        />
+                        {asset.isPro && (
+                          <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                            <Crown className="h-3 w-3" />
+                            PRO
+                          </div>
+                        )}
+                        {/* Copy Button Overlay */}
+                        <button
+                          onClick={() => handleCopyAssetUrl(asset)}
+                          className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          {copiedAssetId === asset.id ? (
+                            <div className="flex items-center gap-1.5 text-white text-xs">
+                              <Check className="h-4 w-4" />
+                              Copied!
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-white text-xs">
+                              <Copy className="h-4 w-4" />
+                              Copy URL
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                      {/* Info */}
+                      <div className="p-2">
+                        <div className="flex items-start justify-between gap-1">
+                          <span className="font-medium text-xs truncate">
+                            {asset.name}
+                          </span>
+                          <span
+                            className={`text-[9px] px-1 py-0.5 rounded font-medium shrink-0 ${getAssetCategoryColor(
+                              asset.category
+                            )}`}
+                          >
+                            {asset.type.toUpperCase()}
+                          </span>
+                        </div>
+                        {asset.tags.length > 0 && (
+                          <div className="flex gap-1 flex-wrap mt-1">
+                            {asset.tags.slice(0, 2).map((tag) => (
+                              <span
+                                key={tag}
+                                className="text-[9px] bg-muted px-1 py-0.5 rounded text-muted-foreground"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!loadingAssets && filteredAssets.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
+                  <Image className="h-12 w-12 mb-3 opacity-50" />
+                  <p className="text-sm">No assets found</p>
+                  <p className="text-xs mt-1">Try a different search or category</p>
+                </div>
+              )}
+            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="chats" className="mt-4 flex-1">

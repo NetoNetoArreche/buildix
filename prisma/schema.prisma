@@ -250,6 +250,23 @@ model CodeSnippet {
   @@map("code_snippets")
 }
 
+// UIAsset - assets library (icons, images, illustrations) managed by admin
+model UIAsset {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  url         String   // URL da imagem/asset
+  category    String   // "icon", "image", "illustration", "background", "logo"
+  tags        String[]
+  type        String   // "svg", "png", "jpg", "webp"
+  isPro       Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("ui_assets")
+}
+
 // ============================================
 // COMMUNITY / TEMPLATES MODELS
 // ============================================

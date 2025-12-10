@@ -47,6 +47,7 @@ import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal"
 import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
+import { TemplateTag } from "@/components/editor/chat/TemplateTag";
 import { cn } from "@/lib/utils";
 import { generateThumbnailWithDelay } from "@/lib/thumbnail";
 import type { AIModel, ContentType } from "@/types";
@@ -54,6 +55,13 @@ import { CONTENT_TYPE_OPTIONS } from "@/lib/constants/instagram-dimensions";
 import { type CodeSnippet, type SelectedSnippet } from "@/lib/code-snippets";
 import { type UIComponent, type SelectedComponent } from "@/lib/ui-components";
 import { extractProjectDesignContext } from "@/lib/ai/design-tokens";
+import { type TemplateWithAuthor } from "@/types/community";
+
+interface SelectedTemplate {
+  id: string;
+  slug: string;
+  title: string;
+}
 
 interface ChatMessage {
   id: string;
@@ -97,6 +105,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
   const [isFigmaModalOpen, setIsFigmaModalOpen] = useState(false);
   const [selectedSnippets, setSelectedSnippets] = useState<SelectedSnippet[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<SelectedTemplate[]>([]);
   const [referenceImage, setReferenceImage] = useState<{
     data: string;
     mimeType: string;
@@ -395,6 +404,26 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
   };
 
+  // Handler for selecting a template from the modal
+  const handleSelectTemplate = (template: TemplateWithAuthor) => {
+    // Check if template is already selected
+    if (selectedTemplates.some((t) => t.id === template.id)) return;
+
+    setSelectedTemplates((prev) => [
+      ...prev,
+      {
+        id: template.id,
+        slug: template.slug,
+        title: template.title,
+      },
+    ]);
+  };
+
+  // Handler for removing a template
+  const handleRemoveTemplate = (templateId: string) => {
+    setSelectedTemplates((prev) => prev.filter((t) => t.id !== templateId));
+  };
+
   // Handler for prompt input change with @ detection
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -458,6 +487,28 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     // Build the full prompt with snippets and components
     let fullPrompt = prompt;
 
+    // Add templates to the prompt (fetch HTML from API)
+    if (selectedTemplates.length > 0) {
+      const templateHtmls: string[] = [];
+      for (const t of selectedTemplates) {
+        try {
+          const response = await fetch(`/api/community/templates/${t.slug}`);
+          if (response.ok) {
+            const data = await response.json();
+            const homePage = data.project?.pages?.find((p: any) => p.isHome) || data.project?.pages?.[0];
+            if (homePage?.htmlContent) {
+              templateHtmls.push(`<!-- Template: ${t.title} -->\n${homePage.htmlContent}`);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch template:", t.slug, e);
+        }
+      }
+      if (templateHtmls.length > 0) {
+        fullPrompt = `${fullPrompt}\n\n--- TEMPLATE REFERENCE ---\nUse the following template as a reference/starting point. You can customize and adapt the design:\n\n${templateHtmls.join("\n\n")}`;
+      }
+    }
+
     // Add components to the prompt (fetch from API)
     if (selectedComponents.length > 0) {
       const componentCodes: string[] = [];
@@ -518,6 +569,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     setPrompt("");
     setSelectedSnippets([]); // Clear snippets after sending
     setSelectedComponents([]); // Clear components after sending
+    setSelectedTemplates([]); // Clear templates after sending
     setReferenceImage(null); // Clear image after sending
     setStreamingContent(""); // Reset streaming content
     setIsStreaming(true); // Enable real-time preview
@@ -946,9 +998,16 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
         {/* Prompt Input */}
         <div className="border-t p-3">
           <div className="rounded-lg border bg-background">
-            {/* Selected Components and Snippets Tags */}
-            {(selectedComponents.length > 0 || selectedSnippets.length > 0) && (
+            {/* Selected Components, Templates and Snippets Tags */}
+            {(selectedComponents.length > 0 || selectedSnippets.length > 0 || selectedTemplates.length > 0) && (
               <div className="flex flex-wrap gap-1.5 p-2 pb-0">
+                {selectedTemplates.map((template) => (
+                  <TemplateTag
+                    key={template.id}
+                    template={template}
+                    onRemove={() => handleRemoveTemplate(template.id)}
+                  />
+                ))}
                 {selectedComponents.map((component) => (
                   <ComponentTag
                     key={component.id}
@@ -1174,6 +1233,7 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
         onOpenChange={setIsSnippetModalOpen}
         onSelectSnippet={handleSelectSnippet}
         onSelectComponent={handleSelectComponent}
+        onSelectTemplate={handleSelectTemplate}
       />
 
       {/* Figma Import Modal */}
