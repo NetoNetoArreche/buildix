@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,6 +47,7 @@ interface DbComponent {
   code: string;
   tags: string[];
   charCount: number;
+  isPro: boolean;
 }
 
 interface CodeSnippetsModalProps {
@@ -80,6 +81,59 @@ const TEMPLATE_CATEGORIES: { value: TemplateCategory | "all"; label: string }[] 
   { value: "saas", label: "SaaS" },
   { value: "personal", label: "Personal" },
 ];
+
+// Cache for template HTML content
+const templateHtmlCache = new Map<string, string>();
+
+// Template Preview Wrapper - fetches HTML on hover
+function TemplatePreviewWrapper({
+  template,
+  children,
+}: {
+  template: TemplateWithAuthor;
+  children: React.ReactNode;
+}) {
+  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const hasFetched = useRef(false);
+
+  const handleMouseEnter = async () => {
+    // Check cache first
+    if (templateHtmlCache.has(template.slug)) {
+      setHtmlContent(templateHtmlCache.get(template.slug)!);
+      return;
+    }
+
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    try {
+      const res = await fetch(`/api/community/templates/${template.slug}`);
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const homePage = data.project?.pages?.find((p: any) => p.isHome) || data.project?.pages?.[0];
+
+      if (homePage?.htmlContent) {
+        templateHtmlCache.set(template.slug, homePage.htmlContent);
+        setHtmlContent(homePage.htmlContent);
+      }
+    } catch (error) {
+      console.error("Failed to fetch template preview:", error);
+    }
+  };
+
+  return (
+    <div onMouseEnter={handleMouseEnter} className="w-full">
+      {htmlContent ? (
+        <ComponentPreviewTooltip code={htmlContent}>
+          {children}
+        </ComponentPreviewTooltip>
+      ) : (
+        children
+      )}
+    </div>
+  );
+}
 
 export function CodeSnippetsModal({
   open,
@@ -167,6 +221,7 @@ export function CodeSnippetsModal({
       code: c.code,
       tags: c.tags,
       charCount: c.charCount,
+      isPro: c.isPro,
     }));
   }, [dbComponents]);
 
@@ -422,11 +477,16 @@ export function CodeSnippetsModal({
                         className="flex flex-col p-3 rounded-lg border border-border/50 hover:border-[hsl(var(--buildix-primary))] hover:bg-muted/50 transition-colors text-left group w-full"
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className="font-medium text-sm group-hover:text-[hsl(var(--buildix-primary))] transition-colors">
-                            {component.name}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-sm group-hover:text-[hsl(var(--buildix-primary))] transition-colors">
+                              {component.name}
+                            </span>
+                            {component.isPro && (
+                              <Crown className="h-3.5 w-3.5 text-amber-500" />
+                            )}
+                          </div>
                           <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${getComponentCategoryColor(
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getComponentCategoryColor(
                               component.category
                             )}`}
                           >
@@ -491,67 +551,68 @@ export function CodeSnippetsModal({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-4">
                   {filteredTemplates.map((template) => (
-                    <button
-                      key={template.id}
-                      onClick={() => {
-                        onSelectTemplate?.(template);
-                        onOpenChange(false);
-                      }}
-                      className="flex flex-col p-3 rounded-lg border border-border/50 hover:border-[hsl(var(--buildix-primary))] hover:bg-muted/50 transition-colors text-left group"
-                    >
-                      {/* Thumbnail */}
-                      {template.thumbnail && (
-                        <div className="relative w-full h-24 mb-2 rounded-md overflow-hidden bg-muted">
-                          <img
-                            src={template.thumbnail}
-                            alt={template.title}
-                            className="w-full h-full object-cover"
-                          />
-                          {template.isPro && (
-                            <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                              <Crown className="h-3 w-3" />
-                              PRO
-                            </div>
-                          )}
+                    <TemplatePreviewWrapper key={template.id} template={template}>
+                      <button
+                        onClick={() => {
+                          onSelectTemplate?.(template);
+                          onOpenChange(false);
+                        }}
+                        className="flex flex-col p-3 rounded-lg border border-border/50 hover:border-[hsl(var(--buildix-primary))] hover:bg-muted/50 transition-colors text-left group w-full"
+                      >
+                        {/* Thumbnail */}
+                        {template.thumbnail && (
+                          <div className="relative w-full h-24 mb-2 rounded-md overflow-hidden bg-muted">
+                            <img
+                              src={template.thumbnail}
+                              alt={template.title}
+                              className="w-full h-full object-cover"
+                            />
+                            {template.isPro && (
+                              <div className="absolute top-1 right-1 bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                                <Crown className="h-3 w-3" />
+                                PRO
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium text-sm group-hover:text-[hsl(var(--buildix-primary))] transition-colors line-clamp-1">
+                            {template.title}
+                          </span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getTemplateCategoryColor(
+                              template.category
+                            )}`}
+                          >
+                            {template.category.toUpperCase()}
+                          </span>
                         </div>
-                      )}
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-sm group-hover:text-[hsl(var(--buildix-primary))] transition-colors line-clamp-1">
-                          {template.title}
-                        </span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${getTemplateCategoryColor(
-                            template.category
-                          )}`}
-                        >
-                          {template.category.toUpperCase()}
-                        </span>
-                      </div>
-                      {template.description && (
-                        <span className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                          {template.description}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {template.viewCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Heart className="h-3 w-3" />
-                          {template.likeCount}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Shuffle className="h-3 w-3" />
-                          {template.remixCount}
-                        </span>
-                        {template.project?.user && (
-                          <span className="ml-auto truncate max-w-[100px]">
-                            by {template.project.user.displayName || template.project.user.name}
+                        {template.description && (
+                          <span className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {template.description}
                           </span>
                         )}
-                      </div>
-                    </button>
+                        <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Eye className="h-3 w-3" />
+                            {template.viewCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="h-3 w-3" />
+                            {template.likeCount}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Shuffle className="h-3 w-3" />
+                            {template.remixCount}
+                          </span>
+                          {template.project?.user && (
+                            <span className="ml-auto truncate max-w-[100px]">
+                              by {template.project.user.displayName || template.project.user.name}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    </TemplatePreviewWrapper>
                   ))}
                 </div>
               )}

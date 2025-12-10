@@ -93,11 +93,14 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
               body {
-                overflow: hidden;
+                overflow: auto;
                 background: #09090b;
                 min-height: 100vh;
               }
-              ::-webkit-scrollbar { display: none; }
+              ::-webkit-scrollbar { width: 8px; height: 8px; }
+              ::-webkit-scrollbar-track { background: #18181b; }
+              ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px; }
+              ::-webkit-scrollbar-thumb:hover { background: #52525b; }
             </style>
           </head>
           <body>
@@ -136,10 +139,9 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
             width: 1440,
             height: 900,
             transform: "scale(0.278)",
-            pointerEvents: "none",
             border: "none",
           }}
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
           title="Component Preview"
         />
       </div>

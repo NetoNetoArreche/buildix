@@ -15,6 +15,7 @@ export async function GET() {
         code: true,
         tags: true,
         charCount: true,
+        isPro: true,
       },
     });
 
