@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { Paintbrush, Image as ImageIcon, X, ChevronLeft, ChevronRight, RotateCcw, Sparkles } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { ImageSelectorModal } from "@/components/editor/modals/ImageSelectorModal";
@@ -230,6 +230,35 @@ export function BackgroundSection({
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [gradientPage, setGradientPage] = useState(0);
 
+  // Image overlay state - parse from existing background if it has overlay
+  const parseImageOverlay = useCallback((bgImage: string): { enabled: boolean; color: string; opacity: number } => {
+    if (!bgImage) return { enabled: false, color: "#000000", opacity: 50 };
+    // Check if background has a linear-gradient overlay: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(...)
+    const overlayMatch = bgImage.match(/linear-gradient\s*\(\s*rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/i);
+    if (overlayMatch) {
+      const r = parseInt(overlayMatch[1]);
+      const g = parseInt(overlayMatch[2]);
+      const b = parseInt(overlayMatch[3]);
+      const a = parseFloat(overlayMatch[4]);
+      const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+      return { enabled: true, color: hex, opacity: Math.round(a * 100) };
+    }
+    return { enabled: false, color: "#000000", opacity: 50 };
+  }, []);
+
+  const [imageOverlay, setImageOverlay] = useState(() => parseImageOverlay(backgroundImage));
+  const isInternalUpdateRef = useRef(false);
+
+  // Sync overlay state when backgroundImage changes externally (not from our own update)
+  useEffect(() => {
+    if (isInternalUpdateRef.current) {
+      isInternalUpdateRef.current = false;
+      return;
+    }
+    const parsed = parseImageOverlay(backgroundImage);
+    setImageOverlay(parsed);
+  }, [backgroundImage, parseImageOverlay]);
+
   // Background assets from store
   const { addBackgroundAsset } = useEditorStore();
 
@@ -261,10 +290,67 @@ export function BackgroundSection({
     return colorToHex(backgroundColor);
   }, [backgroundColor]);
 
+  // Extract clean URL from background-image (remove ALL overlay gradients if present)
+  const extractImageUrl = useCallback((bgImage: string): string => {
+    if (!bgImage) return "";
+    // Keep removing overlay gradient patterns until we get to the url()
+    let cleaned = bgImage;
+    // Remove ALL linear-gradient(rgba...) patterns - they may have accumulated
+    while (cleaned.match(/^linear-gradient\s*\(\s*rgba\s*\([^)]+\)\s*,\s*rgba\s*\([^)]+\)\s*\)\s*,\s*/i)) {
+      cleaned = cleaned.replace(/^linear-gradient\s*\(\s*rgba\s*\([^)]+\)\s*,\s*rgba\s*\([^)]+\)\s*\)\s*,\s*/i, "").trim();
+    }
+    // Also handle case where there's no comma after gradient (malformed)
+    cleaned = cleaned.replace(/^linear-gradient\s*\([^)]+\)\s*,?\s*/gi, "").trim();
+    // Extract just the url(...) part if it exists
+    const urlMatch = cleaned.match(/url\s*\(\s*['"]?[^'")\s]+['"]?\s*\)/i);
+    return urlMatch ? urlMatch[0] : cleaned;
+  }, []);
+
+  // Apply overlay to background image
+  const applyImageOverlay = useCallback((imageUrl: string, overlay: { enabled: boolean; color: string; opacity: number }) => {
+    // Extract just the URL from background-image value
+    const cleanUrl = extractImageUrl(imageUrl);
+
+    if (!overlay.enabled || !cleanUrl) {
+      return cleanUrl;
+    }
+
+    // Convert hex to rgba
+    const hex = overlay.color.replace("#", "");
+    const r = parseInt(hex.slice(0, 2), 16) || 0;
+    const g = parseInt(hex.slice(2, 4), 16) || 0;
+    const b = parseInt(hex.slice(4, 6), 16) || 0;
+    const a = overlay.opacity / 100;
+
+    // Create overlay gradient + image
+    return `linear-gradient(rgba(${r}, ${g}, ${b}, ${a}), rgba(${r}, ${g}, ${b}, ${a})), ${cleanUrl}`;
+  }, [extractImageUrl]);
+
   const handleImageSelect = (url: string) => {
-    onBackgroundChange("backgroundImage", `url('${url}')`);
+    const bgValue = applyImageOverlay(`url('${url}')`, imageOverlay);
+    isInternalUpdateRef.current = true;
+    onBackgroundChange("backgroundImage", bgValue);
     setIsImageSelectorOpen(false);
   };
+
+  const handleOverlayChange = useCallback((updates: Partial<{ enabled: boolean; color: string; opacity: number }>) => {
+    setImageOverlay(prev => {
+      const newOverlay = { ...prev, ...updates };
+
+      // Re-apply background with new overlay
+      if (backgroundImage) {
+        const cleanUrl = extractImageUrl(backgroundImage);
+        if (cleanUrl) {
+          const bgValue = applyImageOverlay(cleanUrl, newOverlay);
+          // Mark as internal update to prevent useEffect from resetting state
+          isInternalUpdateRef.current = true;
+          onBackgroundChange("backgroundImage", bgValue);
+        }
+      }
+
+      return newOverlay;
+    });
+  }, [backgroundImage, extractImageUrl, applyImageOverlay, onBackgroundChange]);
 
   const handleTypeChange = (type: BackgroundType) => {
     setBackgroundType(type);
@@ -600,7 +686,7 @@ export function BackgroundSection({
               onClick={() => setIsImageSelectorOpen(true)}
             >
               <img
-                src={backgroundImage.replace(/url\(['"]?|['"]?\)/g, "")}
+                src={extractImageUrl(backgroundImage).replace(/url\(['"]?|['"]?\)/g, "")}
                 alt="Background"
                 className="h-full w-full object-cover transition-transform group-hover:scale-105"
               />
@@ -635,39 +721,123 @@ export function BackgroundSection({
           />
 
           {backgroundImage && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {/* Background Size */}
-              <div className="space-y-0.5">
-                <label className="text-[10px] text-muted-foreground">Size</label>
-                <select
-                  value={backgroundSize || "cover"}
-                  onChange={(e) => onBackgroundChange("backgroundSize", e.target.value)}
-                  className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
-                >
-                  {backgroundSizes.map((size) => (
-                    <option key={size} value={size} className="bg-background text-foreground">
-                      {size}
-                    </option>
-                  ))}
-                </select>
+            <>
+              <div className="grid grid-cols-2 gap-1.5">
+                {/* Background Size */}
+                <div className="space-y-0.5">
+                  <label className="text-[10px] text-muted-foreground">Size</label>
+                  <select
+                    value={backgroundSize || "cover"}
+                    onChange={(e) => onBackgroundChange("backgroundSize", e.target.value)}
+                    className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
+                  >
+                    {backgroundSizes.map((size) => (
+                      <option key={size} value={size} className="bg-background text-foreground">
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Background Position */}
+                <div className="space-y-0.5">
+                  <label className="text-[10px] text-muted-foreground">Position</label>
+                  <select
+                    value={backgroundPosition || "center"}
+                    onChange={(e) => onBackgroundChange("backgroundPosition", e.target.value)}
+                    className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
+                  >
+                    {backgroundPositions.map((pos) => (
+                      <option key={pos} value={pos} className="bg-background text-foreground">
+                        {pos}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Background Position */}
-              <div className="space-y-0.5">
-                <label className="text-[10px] text-muted-foreground">Position</label>
-                <select
-                  value={backgroundPosition || "center"}
-                  onChange={(e) => onBackgroundChange("backgroundPosition", e.target.value)}
-                  className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
-                >
-                  {backgroundPositions.map((pos) => (
-                    <option key={pos} value={pos} className="bg-background text-foreground">
-                      {pos}
-                    </option>
-                  ))}
-                </select>
+              {/* Image Overlay Controls */}
+              <div className="space-y-2 pt-2 border-t border-border/30 mt-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] text-muted-foreground">Color Overlay</label>
+                  <button
+                    onClick={() => handleOverlayChange({ enabled: !imageOverlay.enabled })}
+                    className={cn(
+                      "w-8 h-4 rounded-full transition-colors relative flex-shrink-0",
+                      imageOverlay.enabled ? "bg-[hsl(var(--buildix-primary))]" : "bg-muted-foreground/30"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-transform duration-200",
+                        imageOverlay.enabled && "translate-x-4"
+                      )}
+                    />
+                  </button>
+                </div>
+
+                {imageOverlay.enabled && (
+                  <div className="space-y-2">
+                    {/* Overlay Color */}
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="color"
+                        value={imageOverlay.color}
+                        onChange={(e) => handleOverlayChange({ color: e.target.value })}
+                        className="h-6 w-6 cursor-pointer rounded border bg-transparent flex-shrink-0"
+                      />
+                      <input
+                        type="text"
+                        value={imageOverlay.color}
+                        onChange={(e) => handleOverlayChange({ color: e.target.value })}
+                        className="h-6 flex-1 rounded border bg-background px-1.5 text-[10px] font-mono"
+                      />
+                    </div>
+
+                    {/* Overlay Opacity */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted-foreground w-12">Opacity</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={imageOverlay.opacity}
+                        onChange={(e) => handleOverlayChange({ opacity: parseInt(e.target.value) })}
+                        className="flex-1 h-1"
+                      />
+                      <span className="text-[10px] text-muted-foreground w-8 text-right">
+                        {imageOverlay.opacity}%
+                      </span>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => handleOverlayChange({ color: "#000000", opacity: 50, enabled: true })}
+                        className="flex-1 h-6 rounded border text-[9px] hover:bg-muted/50 transition-colors"
+                        title="Dark"
+                      >
+                        Dark
+                      </button>
+                      <button
+                        onClick={() => handleOverlayChange({ color: "#000000", opacity: 30, enabled: true })}
+                        className="flex-1 h-6 rounded border text-[9px] hover:bg-muted/50 transition-colors"
+                        title="Light Dark"
+                      >
+                        Light
+                      </button>
+                      <button
+                        onClick={() => handleOverlayChange({ color: "#000000", opacity: 70, enabled: true })}
+                        className="flex-1 h-6 rounded border text-[9px] hover:bg-muted/50 transition-colors"
+                        title="Heavy"
+                      >
+                        Heavy
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+            </>
           )}
         </div>
 

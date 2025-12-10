@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { cn } from "@/lib/utils";
-import type { BackgroundAsset, BlendModeType, AlphaMaskType } from "@/types";
+import type { BackgroundAsset, BlendModeType, AlphaMaskType, OverlayConfig } from "@/types";
 
 interface AssetControlsPanelProps {
   asset: BackgroundAsset;
@@ -44,6 +44,46 @@ const OBJECT_FIT_OPTIONS = [
   { value: "none", label: "None" },
 ];
 
+// Preset filters for quick application
+const PRESETS = [
+  {
+    id: "dark-overlay",
+    label: "Dark",
+    icon: "🌑",
+    apply: { overlay: { enabled: true, color: "#000000", opacity: 50 } },
+  },
+  {
+    id: "light-overlay",
+    label: "Light",
+    icon: "☀️",
+    apply: { overlay: { enabled: true, color: "#ffffff", opacity: 30 } },
+  },
+  {
+    id: "vignette",
+    label: "Vignette",
+    icon: "🔲",
+    apply: { alphaMask: { enabled: true, type: "radial" as AlphaMaskType, intensity: 70 } },
+  },
+  {
+    id: "grayscale",
+    label: "B&W",
+    icon: "⬛",
+    apply: { saturation: 0 },
+  },
+  {
+    id: "high-contrast",
+    label: "Vivid",
+    icon: "✨",
+    apply: { brightness: 110, saturation: 130 },
+  },
+  {
+    id: "blur-soft",
+    label: "Blur",
+    icon: "💨",
+    apply: { blur: 8 },
+  },
+] as const;
+
 export function AssetControlsPanel({ asset, onUpdate }: AssetControlsPanelProps) {
   const handleSliderChange = useCallback(
     (property: keyof BackgroundAsset, value: number) => {
@@ -61,8 +101,111 @@ export function AssetControlsPanel({ asset, onUpdate }: AssetControlsPanelProps)
     [asset.alphaMask, onUpdate]
   );
 
+  const handleOverlayChange = useCallback(
+    (updates: Partial<OverlayConfig>) => {
+      onUpdate({
+        overlay: {
+          enabled: asset.overlay?.enabled ?? false,
+          color: asset.overlay?.color ?? "#000000",
+          opacity: asset.overlay?.opacity ?? 50,
+          ...updates
+        },
+      });
+    },
+    [asset.overlay, onUpdate]
+  );
+
+  const applyPreset = useCallback(
+    (preset: typeof PRESETS[number]) => {
+      onUpdate(preset.apply as Partial<BackgroundAsset>);
+    },
+    [onUpdate]
+  );
+
   return (
     <div className="space-y-6">
+      {/* Quick Presets */}
+      <div className="space-y-3">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Quick Presets
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => applyPreset(preset)}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg border bg-card hover:bg-accent hover:border-[hsl(var(--buildix-primary))] transition-colors"
+            >
+              <span className="text-lg">{preset.icon}</span>
+              <span className="text-[10px] text-muted-foreground">{preset.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Overlay (darkens only the image) */}
+      <div className="space-y-4">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Color Overlay
+        </div>
+
+        {/* Toggle Overlay */}
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-sm">Enable Overlay</label>
+            <p className="text-xs text-muted-foreground">Darkens only the image</p>
+          </div>
+          <button
+            onClick={() => handleOverlayChange({ enabled: !asset.overlay?.enabled })}
+            className={cn(
+              "w-10 h-5 rounded-full transition-colors relative",
+              asset.overlay?.enabled ? "bg-[hsl(var(--buildix-primary))]" : "bg-muted"
+            )}
+          >
+            <span
+              className={cn(
+                "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform",
+                asset.overlay?.enabled ? "translate-x-5" : "translate-x-0.5"
+              )}
+            />
+          </button>
+        </div>
+
+        {/* Overlay Controls (visible when enabled) */}
+        {asset.overlay?.enabled && (
+          <>
+            {/* Overlay Color */}
+            <div className="space-y-2">
+              <label className="text-sm">Overlay Color</label>
+              <div className="flex gap-2">
+                <input
+                  type="color"
+                  value={asset.overlay?.color ?? "#000000"}
+                  onChange={(e) => handleOverlayChange({ color: e.target.value })}
+                  className="w-10 h-8 rounded border cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={asset.overlay?.color ?? "#000000"}
+                  onChange={(e) => handleOverlayChange({ color: e.target.value })}
+                  className="flex-1 h-8 rounded border bg-background px-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Overlay Opacity */}
+            <SliderControl
+              label="Overlay Opacity"
+              value={asset.overlay?.opacity ?? 50}
+              min={0}
+              max={100}
+              unit="%"
+              onChange={(v) => handleOverlayChange({ opacity: v })}
+            />
+          </>
+        )}
+      </div>
+
       {/* Color Adjustments */}
       <div className="space-y-4">
         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

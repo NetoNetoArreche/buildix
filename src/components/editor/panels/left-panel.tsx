@@ -280,10 +280,11 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
 
         setMessages((prev) => [...prev, userMessage]);
         setStreamingContent("");
-        setIsStreaming(true); // Enable real-time preview
 
         const modelToUse = pendingModel || "gemini";
         const typeToUse = pendingContentType || "landing";
+
+        setIsStreaming(true, typeToUse); // Enable real-time preview with content type
 
         // Save user message to database
         if (projectId) {
@@ -572,7 +573,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     setSelectedTemplates([]); // Clear templates after sending
     setReferenceImage(null); // Clear image after sending
     setStreamingContent(""); // Reset streaming content
-    setIsStreaming(true); // Enable real-time preview
+    setIsStreaming(true, contentType); // Enable real-time preview with content type
 
     // Save user message to database (save the display prompt, not the full one with snippets)
     if (projectId) {
@@ -653,8 +654,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
     }
 
     // Determine if this is actually a revision
-    // It's a revision ONLY if there's existing HTML AND user is NOT asking to create a new page
-    const isRevision = hasExistingHtml && !wantsNewPage && contentType === "landing";
+    // It's a revision if there's existing HTML AND user is NOT asking to create a new page
+    // NOTE: Removed contentType === "landing" check - revisions should work for ALL content types (including Instagram)
+    const isRevision = hasExistingHtml && !wantsNewPage;
 
     // Determine the generation type
     let generationType: "generation" | "revision" | "revision-with-image" | "editing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "page-generation";
@@ -683,8 +685,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
       prompt: currentPrompt,
       model: selectedModel,
       type: generationType,
-      // Always send currentHtml when it exists, so AI knows what to preserve
-      currentHtml: isRevision ? htmlContent : undefined,
+      // CRITICAL: Always send currentHtml when it exists, so AI knows what to preserve
+      // This enables revisions for ALL content types (landing, instagram, etc.)
+      currentHtml: hasExistingHtml ? htmlContent : undefined,
       // Include design context for multi-page consistency
       designContext: designContext,
       referenceImage: currentReferenceImage ? {
@@ -746,7 +749,7 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
   const handlePromptBuilderGenerate = async (builderPrompt: string) => {
     setShowPromptBuilder(false);
     setStreamingContent(""); // Reset streaming content
-    setIsStreaming(true); // Enable real-time preview
+    setIsStreaming(true, "landing"); // Enable real-time preview - prompt builder generates landing pages
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),

@@ -44,9 +44,17 @@ import { cn, getPreviewIframe } from "@/lib/utils";
 import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
+import { TemplateTag } from "@/components/editor/chat/TemplateTag";
 import { PromptBuilder } from "@/components/prompt/prompt-builder";
 import type { CodeSnippet, SelectedSnippet } from "@/lib/code-snippets";
 import type { UIComponent, SelectedComponent } from "@/lib/ui-components";
+import type { TemplateWithAuthor } from "@/types/community";
+
+interface SelectedTemplate {
+  id: string;
+  slug: string;
+  title: string;
+}
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import {
   SpacingSection,
@@ -1721,6 +1729,7 @@ function PromptTab({
   const [selectedModel, setSelectedModel] = useState<"gemini" | "claude">("gemini");
   const [selectedSnippets, setSelectedSnippets] = useState<SelectedSnippet[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<SelectedTemplate[]>([]);
   const [snippetsModalOpen, setSnippetsModalOpen] = useState(false);
   const [promptBuilderOpen, setPromptBuilderOpen] = useState(false);
   const [referenceImage, setReferenceImage] = useState<{
@@ -1792,6 +1801,20 @@ function PromptTab({
       ...prev,
       { id: component.id, name: component.name, charCount: component.charCount },
     ]);
+  };
+
+  // Handle template selection
+  const handleSelectTemplate = (template: TemplateWithAuthor) => {
+    if (selectedTemplates.some((t) => t.id === template.id)) return;
+    setSelectedTemplates((prev) => [
+      ...prev,
+      { id: template.id, slug: template.slug, title: template.title },
+    ]);
+  };
+
+  // Handle template removal
+  const handleRemoveTemplate = (templateId: string) => {
+    setSelectedTemplates((prev) => prev.filter((t) => t.id !== templateId));
   };
 
   // Handle apply with all options
@@ -1887,9 +1910,16 @@ function PromptTab({
           }}
         />
 
-        {/* Selected Snippets/Components Tags */}
-        {(selectedSnippets.length > 0 || selectedComponents.length > 0) && (
+        {/* Selected Templates/Snippets/Components Tags */}
+        {(selectedTemplates.length > 0 || selectedSnippets.length > 0 || selectedComponents.length > 0) && (
           <div className="flex flex-wrap gap-1.5">
+            {selectedTemplates.map((template) => (
+              <TemplateTag
+                key={template.id}
+                template={template}
+                onRemove={() => handleRemoveTemplate(template.id)}
+              />
+            ))}
             {selectedSnippets.map((snippet) => (
               <SnippetTag
                 key={snippet.id}
@@ -2026,12 +2056,13 @@ function PromptTab({
           <div className="flex-1" />
 
           {/* Character count indicator */}
-          {(selectedSnippets.length > 0 || selectedComponents.length > 0) && (
+          {(selectedTemplates.length > 0 || selectedSnippets.length > 0 || selectedComponents.length > 0) && (
             <span className="text-[10px] text-muted-foreground">
               +{(
                 (selectedSnippets.reduce((acc, s) => acc + s.charCount, 0) +
                   selectedComponents.reduce((acc, c) => acc + c.charCount, 0)) / 1000
               ).toFixed(1)}K
+              {selectedTemplates.length > 0 && ` +${selectedTemplates.length} template${selectedTemplates.length > 1 ? 's' : ''}`}
             </span>
           )}
         </div>
@@ -2066,6 +2097,7 @@ function PromptTab({
         onOpenChange={setSnippetsModalOpen}
         onSelectSnippet={handleSelectSnippet}
         onSelectComponent={handleSelectComponent}
+        onSelectTemplate={handleSelectTemplate}
       />
 
       {promptBuilderOpen && (

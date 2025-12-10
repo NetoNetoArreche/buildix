@@ -138,6 +138,7 @@ export function Canvas() {
     selectedElementId,
     streamingHtml,
     isStreaming,
+    streamingContentType,
     setInsertAfterMode,
     backgroundAssets,
   } = useEditorStore();
@@ -287,7 +288,10 @@ export function Canvas() {
   }, [baseHtml, backgroundAssets]);
 
   // Detect content type
-  const contentType = detectContentType(displayHtml);
+  // During streaming, use the stored streamingContentType to avoid layout jumps
+  // (HTML is incomplete during streaming, so detectContentType may return wrong type)
+  const detectedContentType = detectContentType(displayHtml);
+  const contentType = isStreaming && streamingContentType ? streamingContentType : detectedContentType;
   const isInstagramContent = contentType !== "landing";
 
   // Initialize with generated HTML from sessionStorage or default HTML
@@ -592,7 +596,7 @@ export function Canvas() {
     <div
       className={cn(
         "relative transition-all duration-300",
-        !canvasModeOpen && deviceMode === "desktop" && "bg-white shadow-2xl",
+        !canvasModeOpen && deviceMode === "desktop" && !isInstagramContent && "bg-white shadow-2xl",
         !canvasModeOpen && deviceMode === "tablet" && !isInstagramContent && "bg-zinc-800 rounded-[2rem] p-3 shadow-2xl",
         !canvasModeOpen && deviceMode === "mobile" && !isInstagramContent && "bg-zinc-900 rounded-[3rem] p-2 shadow-2xl",
         !canvasModeOpen && isInstagramContent && "rounded-none bg-transparent shadow-none"

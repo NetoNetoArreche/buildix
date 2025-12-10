@@ -71,15 +71,30 @@ export async function POST(request: NextRequest) {
           body.elementHtml || ""
         );
         break;
-      // Instagram content types
+      // Instagram content types - use revision prompt if currentHtml exists
       case "instagram-post":
-        systemPrompt = SYSTEM_PROMPTS.instagramPost;
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for instagram-post (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.instagramPost;
+        }
         break;
       case "instagram-carousel":
-        systemPrompt = SYSTEM_PROMPTS.instagramCarousel;
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for instagram-carousel (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.instagramCarousel;
+        }
         break;
       case "instagram-story":
-        systemPrompt = SYSTEM_PROMPTS.instagramStory;
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for instagram-story (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.instagramStory;
+        }
         break;
       // Image reference type - for NEW generation from image (no existing HTML)
       case "image-reference":

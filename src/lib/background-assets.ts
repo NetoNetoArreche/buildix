@@ -44,6 +44,14 @@ export function generateAssetHtml(asset: BackgroundAsset): string {
     "overflow: hidden",
   ].filter(Boolean).join("; ");
 
+  // Color overlay (escurece só a imagem, não afeta elementos por cima)
+  let overlayHtml = "";
+  if (asset.overlay?.enabled) {
+    const overlayColor = asset.overlay.color || "#000000";
+    const overlayOpacity = (asset.overlay.opacity ?? 50) / 100;
+    overlayHtml = `<div style="position: absolute; inset: 0; background-color: ${overlayColor}; opacity: ${overlayOpacity}; pointer-events: none;"></div>`;
+  }
+
   // Alpha mask overlay (if enabled)
   let alphaMaskHtml = "";
   if (asset.alphaMask?.enabled && asset.alphaMask.type !== "none") {
@@ -76,7 +84,7 @@ export function generateAssetHtml(asset: BackgroundAsset): string {
       break;
   }
 
-  return `<div data-buildix-bg-asset="${asset.id}" style="${containerStyles}">${contentHtml}${alphaMaskHtml}</div>`;
+  return `<div data-buildix-bg-asset="${asset.id}" style="${containerStyles}">${contentHtml}${overlayHtml}${alphaMaskHtml}</div>`;
 }
 
 // Inject background assets HTML into the page HTML

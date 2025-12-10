@@ -48,6 +48,7 @@ interface EditorState {
   // Streaming (real-time preview)
   streamingHtml: string;
   isStreaming: boolean;
+  streamingContentType: "landing" | "instagram-post" | "instagram-carousel" | "instagram-story" | null;
 
   // Insert After Mode (for adding content after an element)
   insertAfterMode: boolean;
@@ -74,7 +75,7 @@ interface EditorState {
   setIsGenerating: (isGenerating: boolean) => void;
   setGenerationProgress: (progress: string) => void;
   setStreamingHtml: (html: string) => void;
-  setIsStreaming: (isStreaming: boolean) => void;
+  setIsStreaming: (isStreaming: boolean, contentType?: "landing" | "instagram-post" | "instagram-carousel" | "instagram-story") => void;
   clearStreaming: () => void;
   undo: () => void;
   redo: () => void;
@@ -117,6 +118,7 @@ const initialState = {
   generationProgress: "",
   streamingHtml: "",
   isStreaming: false,
+  streamingContentType: null as "landing" | "instagram-post" | "instagram-carousel" | "instagram-story" | null,
   insertAfterMode: false,
   insertAfterElementId: null as string | null,
   insertAfterElementHtml: null as string | null,
@@ -232,15 +234,19 @@ export const useEditorStore = create<EditorState>()(
         state.streamingHtml = html;
       }),
 
-    setIsStreaming: (isStreaming) =>
+    setIsStreaming: (isStreaming, contentType) =>
       set((state) => {
         state.isStreaming = isStreaming;
+        if (isStreaming && contentType) {
+          state.streamingContentType = contentType;
+        }
       }),
 
     clearStreaming: () =>
       set((state) => {
         state.streamingHtml = "";
         state.isStreaming = false;
+        state.streamingContentType = null;
       }),
 
     undo: () =>

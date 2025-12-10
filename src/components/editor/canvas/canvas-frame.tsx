@@ -588,13 +588,44 @@ export function CanvasFrame({
 
         // Just update body innerHTML - no full reload = no flicker!
         doc.body.innerHTML = newBody;
+
+        // For carousel, apply inline styles to ensure horizontal layout during streaming
+        if (contentType === "instagram-carousel") {
+          doc.body.style.cssText = "display: flex !important; gap: 2rem !important; overflow-x: auto !important; padding: 2rem !important; margin: 0 !important; background-color: #27272a !important; min-height: 100% !important; align-items: flex-start !important;";
+        }
+
         prevHtmlRef.current = html;
         return;
       }
     }
 
     // Full reload needed (initial load, head changed, or not streaming)
-    iframe.srcdoc = html;
+    // For carousel during streaming, inject CSS to force horizontal layout
+    let finalHtml = html;
+    if (isStreaming && contentType === "instagram-carousel" && html) {
+      // Inject carousel layout CSS into the head to ensure horizontal display during streaming
+      const carouselCss = `<style id="buildix-carousel-streaming">
+        body {
+          display: flex !important;
+          gap: 2rem !important;
+          overflow-x: auto !important;
+          padding: 2rem !important;
+          margin: 0 !important;
+          background-color: #27272a !important;
+          min-height: 100% !important;
+          align-items: flex-start !important;
+        }
+      </style>`;
+
+      // Insert before </head> if exists, otherwise before </html> or at the end
+      if (html.includes('</head>')) {
+        finalHtml = html.replace('</head>', carouselCss + '</head>');
+      } else if (html.includes('<body')) {
+        finalHtml = html.replace('<body', carouselCss + '<body');
+      }
+    }
+
+    iframe.srcdoc = finalHtml;
     prevHtmlRef.current = html;
 
     const handleLoad = () => {
@@ -642,7 +673,7 @@ export function CanvasFrame({
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [html, injectSelectionBehavior, isStreaming, reApplyStyles, extractHtmlParts, onlyBodyChanged]);
+  }, [html, injectSelectionBehavior, isStreaming, contentType, reApplyStyles, extractHtmlParts, onlyBodyChanged]);
 
   // Update selection styles when mode changes
   useEffect(() => {

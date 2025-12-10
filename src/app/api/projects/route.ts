@@ -84,15 +84,20 @@ export async function POST(request: NextRequest) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${name}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-  <main style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
-    <h1>Welcome to ${name}</h1>
-  </main>
+<body class="bg-zinc-950 min-h-screen flex items-center justify-center">
+  <div class="text-center">
+    <div class="inline-flex items-center gap-2 bg-violet-500/10 text-violet-400 px-4 py-2 rounded-full text-sm mb-6">
+      <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      <span>Ready to create</span>
+    </div>
+    <h1 class="text-4xl md:text-5xl font-bold text-white mb-4">${name}</h1>
+    <p class="text-zinc-400 text-lg">Use the prompt to generate your design</p>
+  </div>
 </body>
 </html>`,
             isHome: true,

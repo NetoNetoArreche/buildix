@@ -9,18 +9,17 @@ interface ComponentPreviewTooltipProps {
 }
 
 export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTooltipProps) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isPreviewHovered, setIsPreviewHovered] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [triggerRect, setTriggerRect] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
-  const triggerRef = useRef<HTMLDivElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout>(null);
-  const closeTimeoutRef = useRef<NodeJS.Timeout>(null);
 
-  // O preview deve estar visível se o mouse está no trigger OU no preview
-  const showPreview = isHovered || isPreviewHovered;
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const openTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -41,13 +40,10 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
 
     // Posicionar horizontalmente - preferir à direita do modal (fora dele)
     if (rect.right + previewWidth + 20 < viewportWidth) {
-      // Cabe à direita
       x = rect.right + 12;
     } else if (rect.left - previewWidth - 20 > 0) {
-      // Cabe à esquerda
       x = rect.left - previewWidth - 12;
     } else {
-      // Posicionar acima ou abaixo
       x = Math.max(10, rect.left);
     }
 
@@ -63,41 +59,53 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
     setPosition({ x, y });
   }, []);
 
-  const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    clearTimeout(timeoutRef.current);
-    clearTimeout(closeTimeoutRef.current);
+  const handleTriggerEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+
+    if (openTimeoutRef.current) {
+      clearTimeout(openTimeoutRef.current);
+    }
+
     const target = e.currentTarget;
-    timeoutRef.current = setTimeout(() => {
+    openTimeoutRef.current = setTimeout(() => {
       calculatePosition(target);
-      setIsHovered(true);
+      setShowPreview(true);
     }, 300);
   }, [calculatePosition]);
 
-  const handleMouseLeave = useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    // Delay maior para permitir que o mouse chegue ao preview
-    closeTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
-    }, 300);
-  }, []);
+  const handleTriggerLeave = useCallback(() => {
+    if (openTimeoutRef.current) {
+      clearTimeout(openTimeoutRef.current);
+      openTimeoutRef.current = null;
+    }
 
-  const handleBridgeOrPreviewEnter = useCallback(() => {
-    clearTimeout(closeTimeoutRef.current);
-    setIsPreviewHovered(true);
-  }, []);
-
-  const handlePreviewMouseLeave = useCallback(() => {
-    setIsPreviewHovered(false);
-    // Pequeno delay para verificar se voltou ao trigger
+    // Delay para dar tempo de entrar no container do portal
     closeTimeoutRef.current = setTimeout(() => {
-      setIsHovered(false);
+      setShowPreview(false);
     }, 150);
+  }, []);
+
+  // Handler para o container do portal (bridge + preview)
+  const handleContainerEnter = useCallback(() => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleContainerLeave = useCallback(() => {
+    closeTimeoutRef.current = setTimeout(() => {
+      setShowPreview(false);
+    }, 100);
   }, []);
 
   useEffect(() => {
     return () => {
-      clearTimeout(timeoutRef.current);
-      clearTimeout(closeTimeoutRef.current);
+      if (openTimeoutRef.current) clearTimeout(openTimeoutRef.current);
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
     };
   }, []);
 
@@ -138,63 +146,82 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
     }
   }, [showPreview, code]);
 
-  // Calcular posição da ponte invisível
-  const getBridgeStyle = () => {
+  // Calcular dimensões do container que engloba bridge + preview
+  // O container cobre toda a área desde o trigger até o preview para evitar gaps
+  const getContainerStyle = () => {
     if (!triggerRect) return null;
 
     const previewWidth = 400;
     const previewHeight = 280;
     const viewportWidth = window.innerWidth;
 
-    // Verificar se preview está à direita ou à esquerda
     const isRight = triggerRect.right + previewWidth + 20 < viewportWidth;
 
+    // Calcular área total que precisa ser coberta (do trigger até o preview)
+    const minY = Math.min(triggerRect.top, position.y);
+    const maxY = Math.max(triggerRect.bottom, position.y + previewHeight);
+    const totalHeight = maxY - minY;
+
+    // Offset do preview dentro do container
+    const previewOffsetY = position.y - minY;
+
     if (isRight) {
-      // Ponte à direita do trigger
+      // Preview à direita do trigger
+      const bridgeWidth = Math.max(0, position.x - triggerRect.right);
       return {
         position: 'fixed' as const,
         left: triggerRect.right,
-        top: position.y,
-        width: position.x - triggerRect.right,
-        height: previewHeight,
-        zIndex: 9998,
+        top: minY,
+        width: bridgeWidth + previewWidth,
+        height: totalHeight,
+        zIndex: 9999,
+        isRight: true,
+        bridgeWidth,
+        previewOffsetY,
       };
     } else {
-      // Ponte à esquerda do trigger
+      // Preview à esquerda do trigger
+      const bridgeWidth = Math.max(0, triggerRect.left - (position.x + previewWidth));
       return {
         position: 'fixed' as const,
-        left: position.x + previewWidth,
-        top: position.y,
-        width: triggerRect.left - (position.x + previewWidth),
-        height: previewHeight,
-        zIndex: 9998,
+        left: position.x,
+        top: minY,
+        width: previewWidth + bridgeWidth,
+        height: totalHeight,
+        zIndex: 9999,
+        isRight: false,
+        bridgeWidth,
+        previewOffsetY,
       };
     }
   };
 
-  const bridgeStyle = getBridgeStyle();
+  const containerStyle = getContainerStyle();
 
-  const portalContent = showPreview && mounted ? (
-    <>
-      {/* Ponte invisível para facilitar transição do mouse */}
-      {bridgeStyle && bridgeStyle.width > 0 && (
-        <div
-          style={bridgeStyle}
-          onMouseEnter={handleBridgeOrPreviewEnter}
-          onMouseLeave={handlePreviewMouseLeave}
-        />
-      )}
-      {/* Preview */}
+  const portalContent = showPreview && mounted && containerStyle ? (
+    <div
+      ref={containerRef}
+      style={{
+        position: containerStyle.position,
+        left: containerStyle.left,
+        top: containerStyle.top,
+        width: containerStyle.width,
+        height: containerStyle.height,
+        zIndex: containerStyle.zIndex,
+      }}
+      onMouseEnter={handleContainerEnter}
+      onMouseLeave={handleContainerLeave}
+    >
+      {/* Preview posicionado com offset correto */}
       <div
-        className="fixed z-[9999] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="absolute bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         style={{
-          left: position.x,
-          top: position.y,
           width: 400,
           height: 280,
+          top: containerStyle.previewOffsetY,
+          right: containerStyle.isRight ? 0 : 'auto',
+          left: containerStyle.isRight ? 'auto' : 0,
         }}
-        onMouseEnter={handleBridgeOrPreviewEnter}
-        onMouseLeave={handlePreviewMouseLeave}
       >
         {/* Header */}
         <div className="h-7 bg-zinc-800 border-b border-zinc-700 flex items-center px-3 gap-1.5">
@@ -219,14 +246,14 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
           />
         </div>
       </div>
-    </>
+    </div>
   ) : null;
 
   return (
     <div
       ref={triggerRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={handleTriggerEnter}
+      onMouseLeave={handleTriggerLeave}
       className="w-full"
     >
       {children}

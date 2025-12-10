@@ -182,6 +182,12 @@ export interface AlphaMaskConfig {
   intensity: number; // 0-100
 }
 
+export interface OverlayConfig {
+  enabled: boolean;
+  color: string; // Hex color (e.g., "#000000")
+  opacity: number; // 0-100
+}
+
 export interface BackgroundAsset {
   id: string;
   type: BackgroundAssetType;
@@ -207,6 +213,9 @@ export interface BackgroundAsset {
 
   // Alpha Mask
   alphaMask: AlphaMaskConfig;
+
+  // Overlay (escurece só a imagem, não afeta elementos por cima)
+  overlay?: OverlayConfig;
 
   // Blend & Interaction
   blendMode: BlendModeType;
@@ -248,6 +257,11 @@ export const defaultBackgroundAsset: Omit<BackgroundAsset, "id" | "src" | "type"
     enabled: false,
     type: "none",
     intensity: 50,
+  },
+  overlay: {
+    enabled: false,
+    color: "#000000",
+    opacity: 50,
   },
   blendMode: "normal",
   invert: false,

@@ -15,11 +15,19 @@ import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal"
 import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
+import { TemplateTag } from "@/components/editor/chat/TemplateTag";
 import { cn } from "@/lib/utils";
 import type { AIModel, ContentType } from "@/types";
 import { CONTENT_TYPE_OPTIONS } from "@/lib/constants/instagram-dimensions";
 import { type CodeSnippet, type SelectedSnippet } from "@/lib/code-snippets";
 import { type UIComponent, type SelectedComponent } from "@/lib/ui-components";
+import { type TemplateWithAuthor } from "@/types/community";
+
+interface SelectedTemplate {
+  id: string;
+  slug: string;
+  title: string;
+}
 import {
   Tooltip,
   TooltipContent,
@@ -86,6 +94,7 @@ export default function CreatePage() {
   const [isFigmaModalOpen, setIsFigmaModalOpen] = useState(false);
   const [selectedSnippets, setSelectedSnippets] = useState<SelectedSnippet[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([]);
+  const [selectedTemplates, setSelectedTemplates] = useState<SelectedTemplate[]>([]);
   const [referenceImage, setReferenceImage] = useState<{
     data: string;
     mimeType: string;
@@ -153,6 +162,20 @@ export default function CreatePage() {
     setSelectedComponents((prev) => prev.filter((c) => c.id !== componentId));
   };
 
+  // Handler for selecting a template from the modal
+  const handleSelectTemplate = (template: TemplateWithAuthor) => {
+    if (selectedTemplates.some((t) => t.id === template.id)) return;
+    setSelectedTemplates((prev) => [
+      ...prev,
+      { id: template.id, slug: template.slug, title: template.title },
+    ]);
+  };
+
+  // Handler for removing a template
+  const handleRemoveTemplate = (templateId: string) => {
+    setSelectedTemplates((prev) => prev.filter((t) => t.id !== templateId));
+  };
+
   // Handler for prompt input change with @ detection
   const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -209,8 +232,30 @@ export default function CreatePage() {
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
 
-    // Build the full prompt with components and snippets
+    // Build the full prompt with templates, components and snippets
     let fullPrompt = prompt.trim();
+
+    // Add templates to the prompt (fetch HTML from API)
+    if (selectedTemplates.length > 0) {
+      const templateHtmls: string[] = [];
+      for (const t of selectedTemplates) {
+        try {
+          const response = await fetch(`/api/community/templates/${t.slug}`);
+          if (response.ok) {
+            const data = await response.json();
+            const homePage = data.project?.pages?.find((p: any) => p.isHome) || data.project?.pages?.[0];
+            if (homePage?.htmlContent) {
+              templateHtmls.push(`<!-- Template: ${t.title} -->\n${homePage.htmlContent}`);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch template:", t.slug, e);
+        }
+      }
+      if (templateHtmls.length > 0) {
+        fullPrompt = `${fullPrompt}\n\n--- TEMPLATE REFERENCE ---\nUse the following template as a reference/starting point. You can customize and adapt the design:\n\n${templateHtmls.join("\n\n")}`;
+      }
+    }
 
     // Add components to the prompt (fetch from API)
     if (selectedComponents.length > 0) {
@@ -324,9 +369,16 @@ export default function CreatePage() {
       {/* Main Prompt Input */}
       <div className="relative">
         <div className="rounded-xl border bg-card p-1 shadow-lg">
-          {/* Selected Components and Snippets Tags */}
-          {(selectedComponents.length > 0 || selectedSnippets.length > 0) && (
+          {/* Selected Templates, Components and Snippets Tags */}
+          {(selectedTemplates.length > 0 || selectedComponents.length > 0 || selectedSnippets.length > 0) && (
             <div className="flex flex-wrap gap-1.5 p-3 pb-0">
+              {selectedTemplates.map((template) => (
+                <TemplateTag
+                  key={template.id}
+                  template={template}
+                  onRemove={() => handleRemoveTemplate(template.id)}
+                />
+              ))}
               {selectedComponents.map((component) => (
                 <ComponentTag
                   key={component.id}
@@ -613,6 +665,7 @@ export default function CreatePage() {
         onOpenChange={setIsSnippetModalOpen}
         onSelectSnippet={handleSelectSnippet}
         onSelectComponent={handleSelectComponent}
+        onSelectTemplate={handleSelectTemplate}
       />
 
       {/* Figma Import Modal */}
