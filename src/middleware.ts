@@ -9,7 +9,7 @@ export default auth((req) => {
   const publicRoutes = ["/login", "/register"];
 
   // API routes that don't require auth
-  const publicApiRoutes = ["/api/auth"];
+  const publicApiRoutes = ["/api/auth", "/api/stripe/webhook"];
 
   // Check if it's a public route
   const isPublicRoute = publicRoutes.includes(pathname);

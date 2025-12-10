@@ -89,6 +89,10 @@ model User {
   followers       UserFollow[]     @relation("Following")
   following       UserFollow[]     @relation("Followers")
 
+  // Subscription & Usage
+  subscription Subscription?
+  usages       Usage[]
+
   @@map("users")
 }
 
@@ -334,4 +338,60 @@ model UserFollow {
 
   @@unique([followerId, followingId])
   @@map("user_follows")
+}
+
+// ============================================
+// SUBSCRIPTION & USAGE MODELS
+// ============================================
+
+enum PlanType {
+  FREE
+  PRO
+  MAX
+  ULTRA
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  INCOMPLETE
+  TRIALING
+}
+
+// Subscription - user subscription info with Stripe integration
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  plan                 PlanType           @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("subscriptions")
+}
+
+// Usage - monthly usage tracking per user
+model Usage {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  promptsUsed     Int      @default(0)
+  imagesGenerated Int      @default(0)
+  figmaExports    Int      @default(0)
+  periodStart     DateTime @default(now())
+  periodEnd       DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, periodStart])
+  @@index([userId, periodEnd])
+  @@map("usages")
 }
