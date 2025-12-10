@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import type { PublishProjectRequest, PublishProjectResponse } from "@/types/community";
+import type { PublishProjectResponse } from "@/types/community";
 
 // Helper to generate URL-friendly slug
 function generateSlug(title: string): string {
@@ -57,8 +57,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: PublishProjectRequest = await request.json();
-    const { projectId, title, description, category, tags, thumbnail, allowRemix } = body;
+    // Check if user is admin
+    const isAdmin = session.user.role === "admin";
+
+    const body = await request.json();
+    const { projectId, title, description, category, tags, thumbnail, allowRemix, isPro } = body;
 
     // Validate required fields
     if (!projectId || !title || !category) {
@@ -111,11 +114,11 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         category,
-        tags: tags?.map((t) => t.toLowerCase().trim()).filter(Boolean) || [],
+        tags: tags?.map((t: string) => t.toLowerCase().trim()).filter(Boolean) || [],
         thumbnail: thumbnail || project.thumbnail,
         allowRemix: allowRemix ?? true,
         isPublished: true,
-        isPro: false,
+        isPro: isAdmin && isPro === true, // Only admin can set isPro
         isOfficial: false,
       },
     });

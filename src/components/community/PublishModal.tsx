@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
   AlertCircle,
   Upload,
   MonitorPlay,
+  Crown,
 } from "lucide-react";
 import { ScreenCaptureOverlay } from "./ScreenCaptureOverlay";
 
@@ -52,9 +54,13 @@ const CATEGORIES: { value: TemplateCategory; label: string }[] = [
 
 export function PublishModal() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { isPublishModalOpen, closePublishModal, openPublishModal, publishingProjectId } =
     useCommunityStore();
   const { currentProject } = useProjectStore();
+
+  // Check if user is admin
+  const isAdmin = session?.user?.role === "admin";
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -62,6 +68,7 @@ export function PublishModal() {
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [allowRemix, setAllowRemix] = useState(true);
+  const [isPro, setIsPro] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [publishedUrl, setPublishedUrl] = useState<string | null>(null);
@@ -85,6 +92,7 @@ export function PublishModal() {
           setTags([]);
           setTagInput("");
           setAllowRemix(true);
+          setIsPro(false);
           setError(null);
           setPublishedUrl(null);
           setThumbnail(null);
@@ -230,6 +238,7 @@ export function PublishModal() {
           tags,
           allowRemix,
           thumbnail,
+          isPro: isAdmin ? isPro : undefined, // Only send if admin
         }),
       });
 
@@ -485,6 +494,28 @@ export function PublishModal() {
                     </div>
                   </div>
                 </div>
+
+                {/* PRO Template Option - Only visible to admin */}
+                {isAdmin && (
+                  <div className="flex items-center justify-between pt-3 border-t border-muted-foreground/10">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        id="isPro"
+                        checked={isPro}
+                        onCheckedChange={setIsPro}
+                      />
+                      <div>
+                        <Label htmlFor="isPro" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
+                          <Crown className="h-4 w-4 text-amber-500" />
+                          Template PRO
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Disponível apenas para usuários PRO
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Error */}
