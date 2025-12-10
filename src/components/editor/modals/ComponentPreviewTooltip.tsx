@@ -10,11 +10,16 @@ interface ComponentPreviewTooltipProps {
 
 export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTooltipProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isPreviewHovered, setIsPreviewHovered] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout>(null);
+  const closeTimeoutRef = useRef<NodeJS.Timeout>(null);
+
+  // O preview deve estar visível se o mouse está no trigger OU no preview
+  const showPreview = isHovered || isPreviewHovered;
 
   useEffect(() => {
     setMounted(true);
@@ -58,6 +63,7 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
 
   const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     clearTimeout(timeoutRef.current);
+    clearTimeout(closeTimeoutRef.current);
     const target = e.currentTarget;
     timeoutRef.current = setTimeout(() => {
       calculatePosition(target);
@@ -67,18 +73,35 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
 
   const handleMouseLeave = useCallback(() => {
     clearTimeout(timeoutRef.current);
-    setIsHovered(false);
+    // Delay para permitir que o mouse chegue ao preview
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 150);
+  }, []);
+
+  const handlePreviewMouseEnter = useCallback(() => {
+    clearTimeout(closeTimeoutRef.current);
+    setIsPreviewHovered(true);
+  }, []);
+
+  const handlePreviewMouseLeave = useCallback(() => {
+    setIsPreviewHovered(false);
+    // Pequeno delay para verificar se voltou ao trigger
+    closeTimeoutRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 100);
   }, []);
 
   useEffect(() => {
     return () => {
       clearTimeout(timeoutRef.current);
+      clearTimeout(closeTimeoutRef.current);
     };
   }, []);
 
   // Injetar HTML no iframe
   useEffect(() => {
-    if (isHovered && iframeRef.current) {
+    if (showPreview && iframeRef.current) {
       const iframe = iframeRef.current;
       const doc = iframe.contentDocument;
       if (doc) {
@@ -111,9 +134,9 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
         doc.close();
       }
     }
-  }, [isHovered, code]);
+  }, [showPreview, code]);
 
-  const previewContent = isHovered && mounted ? (
+  const previewContent = showPreview && mounted ? (
     <div
       className="fixed z-[9999] bg-zinc-900 border border-zinc-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       style={{
@@ -122,6 +145,8 @@ export function ComponentPreviewTooltip({ code, children }: ComponentPreviewTool
         width: 400,
         height: 280,
       }}
+      onMouseEnter={handlePreviewMouseEnter}
+      onMouseLeave={handlePreviewMouseLeave}
     >
       {/* Header */}
       <div className="h-7 bg-zinc-800 border-b border-zinc-700 flex items-center px-3 gap-1.5">
