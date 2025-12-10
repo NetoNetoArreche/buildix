@@ -3,9 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   FolderOpen,
-  Layout,
   Image,
   Settings,
   HelpCircle,
@@ -43,11 +41,6 @@ const mainNavItems = [
     title: "Community",
     href: "/community",
     icon: Users,
-  },
-  {
-    title: "Templates",
-    href: "/templates",
-    icon: Layout,
   },
   {
     title: "Assets",
