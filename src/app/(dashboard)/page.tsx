@@ -102,6 +102,30 @@ export default function CreatePage() {
   } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // Load Unicorn Studio script for background effect
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const initUnicorn = () => {
+      // Re-init to render any new elements with data-us-project
+      if ((window as any).UnicornStudio?.init) {
+        (window as any).UnicornStudio.init();
+      }
+    };
+
+    // If already loaded, just re-init
+    if ((window as any).UnicornStudio?.init) {
+      initUnicorn();
+      return;
+    }
+
+    // Load script for the first time
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.5.2/dist/unicornStudio.umd.js";
+    script.onload = initUnicorn;
+    (document.head || document.body).appendChild(script);
+  }, []);
+
   // Fetch recent projects
   useEffect(() => {
     const fetchProjects = async () => {
@@ -351,7 +375,14 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-12 pt-16">
+    <div className="relative min-h-full">
+      {/* Unicorn Studio Background Effect - absolute within content area */}
+      <div
+        data-us-project="jLZcDbV4PdB7OmjLfBa3"
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 0, opacity: 0.4 }}
+      />
+      <div className="relative mx-auto max-w-4xl space-y-12 pt-16" style={{ zIndex: 1 }}>
       {/* Hero Section */}
       <div className="text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--buildix-primary))]/10 px-4 py-1.5 text-sm text-[hsl(var(--buildix-primary))]">
@@ -674,6 +705,7 @@ export default function CreatePage() {
         onOpenChange={setIsFigmaModalOpen}
         onImport={handleFigmaImport}
       />
+      </div>
     </div>
   );
 }

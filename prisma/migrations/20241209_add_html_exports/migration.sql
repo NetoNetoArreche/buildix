@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "usages" ADD COLUMN IF NOT EXISTS "htmlExports" INTEGER NOT NULL DEFAULT 0;

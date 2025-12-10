@@ -47,7 +47,7 @@ export async function GET() {
   }
 }
 
-// POST /api/projects - Create a new project
+// POST /api/projects - Create a new project (or duplicate from sourceProjectId)
 export async function POST(request: NextRequest) {
   try {
     // Get authenticated user
@@ -57,13 +57,56 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, initialPrompt } = body;
+    const { name, description, initialPrompt, sourceProjectId } = body;
 
     if (!name) {
       return NextResponse.json(
         { error: "Project name is required" },
         { status: 400 }
       );
+    }
+
+    // If sourceProjectId is provided, duplicate the project
+    if (sourceProjectId) {
+      // Fetch the source project with all its pages
+      const sourceProject = await prisma.project.findFirst({
+        where: {
+          id: sourceProjectId,
+          userId: user.id, // Ensure user owns the source project
+        },
+        include: {
+          pages: true,
+        },
+      });
+
+      if (!sourceProject) {
+        return NextResponse.json(
+          { error: "Source project not found" },
+          { status: 404 }
+        );
+      }
+
+      // Create new project with duplicated pages
+      const project = await prisma.project.create({
+        data: {
+          name,
+          description: description ?? sourceProject.description,
+          userId: user.id,
+          pages: {
+            create: sourceProject.pages.map((page) => ({
+              name: page.name,
+              slug: page.slug,
+              htmlContent: page.htmlContent,
+              isHome: page.isHome,
+            })),
+          },
+        },
+        include: {
+          pages: true,
+        },
+      });
+
+      return NextResponse.json(project, { status: 201 });
     }
 
     // Create project with a default home page

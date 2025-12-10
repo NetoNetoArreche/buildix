@@ -55,6 +55,9 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [renameProject, setRenameProject] = useState<Project | null>(null);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
   // Fetch projects from API
   useEffect(() => {
@@ -111,6 +114,7 @@ export default function ProjectsPage() {
         body: JSON.stringify({
           name: `${project.name} (Copy)`,
           description: project.description,
+          sourceProjectId: project.id, // Copy all pages from source project
         }),
       });
 
@@ -121,6 +125,37 @@ export default function ProjectsPage() {
     } catch (error) {
       console.error("Failed to duplicate project:", error);
     }
+  };
+
+  const handleRenameProject = async () => {
+    if (!renameProject || !newProjectName.trim()) return;
+
+    setIsRenaming(true);
+    try {
+      const response = await fetch(`/api/projects/${renameProject.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newProjectName.trim() }),
+      });
+
+      if (response.ok) {
+        const updatedProject = await response.json();
+        setProjects((prev) =>
+          prev.map((p) => (p.id === updatedProject.id ? { ...p, name: updatedProject.name } : p))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to rename project:", error);
+    } finally {
+      setIsRenaming(false);
+      setRenameProject(null);
+      setNewProjectName("");
+    }
+  };
+
+  const openRenameDialog = (project: Project) => {
+    setRenameProject(project);
+    setNewProjectName(project.name);
   };
 
   const formatDate = (dateString: string) => {
@@ -219,6 +254,7 @@ export default function ProjectsPage() {
               formatDate={formatDate}
               onDelete={() => setDeleteProjectId(project.id)}
               onDuplicate={() => handleDuplicateProject(project)}
+              onRename={() => openRenameDialog(project)}
             />
           ))}
         </div>
@@ -231,6 +267,7 @@ export default function ProjectsPage() {
               formatDate={formatDate}
               onDelete={() => setDeleteProjectId(project.id)}
               onDuplicate={() => handleDuplicateProject(project)}
+              onRename={() => openRenameDialog(project)}
             />
           ))}
         </div>
@@ -265,6 +302,46 @@ export default function ProjectsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Rename Dialog */}
+      <AlertDialog open={!!renameProject} onOpenChange={() => setRenameProject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a new name for your project.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            value={newProjectName}
+            onChange={(e) => setNewProjectName(e.target.value)}
+            placeholder="Project name"
+            className="mt-2"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !isRenaming) {
+                handleRenameProject();
+              }
+            }}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRenaming}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleRenameProject}
+              disabled={isRenaming || !newProjectName.trim()}
+            >
+              {isRenaming ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Renaming...
+                </>
+              ) : (
+                "Rename"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -274,9 +351,10 @@ interface ProjectCardProps {
   formatDate: (date: string) => string;
   onDelete: () => void;
   onDuplicate: () => void;
+  onRename: () => void;
 }
 
-function ProjectCard({ project, formatDate, onDelete, onDuplicate }: ProjectCardProps) {
+function ProjectCard({ project, formatDate, onDelete, onDuplicate, onRename }: ProjectCardProps) {
   // Get HTML content from first page for live preview
   const pageHtml = project.pages?.[0]?.htmlContent;
 
@@ -319,6 +397,7 @@ function ProjectCard({ project, formatDate, onDelete, onDuplicate }: ProjectCard
             project={project}
             onDelete={onDelete}
             onDuplicate={onDuplicate}
+            onRename={onRename}
           />
         </div>
         <div className="mt-3 flex items-center gap-2">
@@ -334,7 +413,7 @@ function ProjectCard({ project, formatDate, onDelete, onDuplicate }: ProjectCard
   );
 }
 
-function ProjectListItem({ project, formatDate, onDelete, onDuplicate }: ProjectCardProps) {
+function ProjectListItem({ project, formatDate, onDelete, onDuplicate, onRename }: ProjectCardProps) {
   // Get HTML content from first page for live preview
   const pageHtml = project.pages?.[0]?.htmlContent;
 
@@ -381,6 +460,7 @@ function ProjectListItem({ project, formatDate, onDelete, onDuplicate }: Project
           project={project}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
+          onRename={onRename}
         />
       </div>
     </div>
@@ -391,9 +471,10 @@ interface ProjectMenuProps {
   project: Project;
   onDelete: () => void;
   onDuplicate: () => void;
+  onRename: () => void;
 }
 
-function ProjectMenu({ project, onDelete, onDuplicate }: ProjectMenuProps) {
+function ProjectMenu({ project, onDelete, onDuplicate, onRename }: ProjectMenuProps) {
   const router = useRouter();
 
   return (
@@ -408,7 +489,7 @@ function ProjectMenu({ project, onDelete, onDuplicate }: ProjectMenuProps) {
           <ExternalLink className="mr-2 h-4 w-4" />
           Open
         </DropdownMenuItem>
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={onRename}>
           <Pencil className="mr-2 h-4 w-4" />
           Rename
         </DropdownMenuItem>
