@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
 const CODE_TO_DESIGN_API = "https://api.to.design/html";
 
@@ -12,6 +13,31 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = session.user.id;
+
+    // Check usage limits for Figma exports
+    const { allowed, usage, plan } = await canUseFeature(userId, "figmaExports");
+    if (!allowed) {
+      const message = getUsageLimitMessage("figmaExports", plan);
+      return NextResponse.json(
+        { error: message, usageLimit: true, usage, plan },
+        { status: 429 }
+      );
+    }
+
+    // Check if user is on FREE plan (no Figma exports allowed)
+    if (plan === "FREE") {
+      return NextResponse.json(
+        {
+          error: "O plano Free não inclui exports para Figma. Faça upgrade para acessar esta funcionalidade!",
+          usageLimit: true,
+          usage,
+          plan
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -55,6 +81,10 @@ export async function POST(request: NextRequest) {
 
     // The API returns the clipboard data as text/html
     const clipboardData = await response.text();
+
+    // Increment usage on successful export
+    await incrementUsage(userId, "figmaExports");
+    console.log(`[Figma Export] Usage incremented for user ${userId}`);
 
     return NextResponse.json({
       success: true,

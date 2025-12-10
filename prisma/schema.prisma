@@ -386,6 +386,7 @@ model Usage {
   promptsUsed     Int      @default(0)
   imagesGenerated Int      @default(0)
   figmaExports    Int      @default(0)
+  htmlExports     Int      @default(0)
   periodStart     DateTime @default(now())
   periodEnd       DateTime
   createdAt       DateTime @default(now())

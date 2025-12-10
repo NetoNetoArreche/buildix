@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { canCreatePage } from "@/lib/usage";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,7 +30,32 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // POST /api/projects/[id]/pages - Create a new page
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id: projectId } = await params;
+
+    // Check page limit for this project
+    const { allowed, currentPages, limit, plan, message } = await canCreatePage(
+      session.user.id,
+      projectId
+    );
+
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: message,
+          usageLimit: true,
+          currentPages,
+          limit,
+          plan,
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { name, slug, htmlContent, cssContent, isHome } = body;
 

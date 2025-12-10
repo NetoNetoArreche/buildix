@@ -12,6 +12,7 @@ import { FontPanel } from "@/components/editor/font-panel";
 import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
 import { FigmaExportModal } from "@/components/editor/modals/FigmaExportModal";
 import { LayersPanel } from "@/components/editor/panels/layers-panel/LayersPanel";
+import { UsageWarningBanner } from "@/components/editor/usage-warning";
 import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useCanvasModeStore } from "@/stores/canvasModeStore";
@@ -264,6 +265,9 @@ export default function EditorPage() {
 
   return (
     <div className="flex h-screen flex-col bg-background">
+      {/* Usage Warning Banner */}
+      <UsageWarningBanner />
+
       {/* Editor Header */}
       <EditorHeader projectId={projectId} projectName={project?.name} pages={project?.pages} />
 

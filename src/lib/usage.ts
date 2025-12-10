@@ -55,6 +55,7 @@ async function getOrCreateCurrentUsage(userId: string) {
         promptsUsed: 0,
         imagesGenerated: 0,
         figmaExports: 0,
+        htmlExports: 0,
       },
     });
   }
@@ -102,7 +103,7 @@ export async function getUserUsageInfo(userId: string): Promise<UserUsageInfo> {
     prompts: createStatus(usage.promptsUsed, limits.promptsPerMonth),
     images: createStatus(usage.imagesGenerated, limits.imagesPerMonth),
     figmaExports: createStatus(usage.figmaExports, limits.figmaExportsPerMonth),
-    htmlExports: createStatus(0, limits.htmlExportsPerMonth), // TODO: Track HTML exports
+    htmlExports: createStatus(usage.htmlExports || 0, limits.htmlExportsPerMonth),
     periodStart: start,
     periodEnd: end,
   };
@@ -160,6 +161,9 @@ export async function incrementUsage(
     case "figmaExports":
       updateData.figmaExports = { increment: amount };
       break;
+    case "htmlExports":
+      updateData.htmlExports = { increment: amount };
+      break;
     default:
       throw new Error(`Unknown usage type: ${type}`);
   }
@@ -211,4 +215,43 @@ export function isUnlimited(limit: number): boolean {
 // Formatar limite para exibição
 export function formatLimit(limit: number): string {
   return limit === -1 ? "Ilimitado" : limit.toString();
+}
+
+// Check if user can create a new page in a project
+export async function canCreatePage(
+  userId: string,
+  projectId: string
+): Promise<{ allowed: boolean; currentPages: number; limit: number; plan: PlanType; message?: string }> {
+  const { prisma: prismaDynamic } = await import("@/lib/prisma");
+
+  const [plan, pageCount] = await Promise.all([
+    getUserPlan(userId),
+    prismaDynamic.page.count({ where: { projectId } }),
+  ]);
+
+  const limits = getPlanLimits(plan);
+  const pageLimit = limits.pagesPerProject;
+
+  // -1 means unlimited
+  if (pageLimit === -1) {
+    return {
+      allowed: true,
+      currentPages: pageCount,
+      limit: pageLimit,
+      plan,
+    };
+  }
+
+  const allowed = pageCount < pageLimit;
+  const message = allowed
+    ? undefined
+    : `Você atingiu o limite de ${pageLimit} páginas por projeto do plano ${PLANS[plan].name}. Faça upgrade para criar mais páginas!`;
+
+  return {
+    allowed,
+    currentPages: pageCount,
+    limit: pageLimit,
+    plan,
+    message,
+  };
 }

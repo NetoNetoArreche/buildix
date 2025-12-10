@@ -73,6 +73,8 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
   const [isExporting, setIsExporting] = useState(false);
   const [isUpdatingThumbnail, setIsUpdatingThumbnail] = useState(false);
   const [thumbnailUpdated, setThumbnailUpdated] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { viewMode, setViewMode, deviceMode, setDeviceMode, zoom, setZoom, undo, redo, canUndo, canRedo, htmlContent, backgroundAssets, showLayersPanel, toggleLayersPanel, syncHtmlFromIframe, currentPage, setCurrentPage } =
     useEditorStore();
   const { openModal } = useUIStore();
@@ -102,17 +104,43 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
     }
   };
 
-  const handleDownloadHTML = () => {
-    const exportHtml = getExportHtml();
-    const blob = new Blob([exportHtml], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "buildix-export.html";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadHTML = async () => {
+    setIsDownloading(true);
+    setExportError(null);
+
+    try {
+      // Check and increment usage limit via API
+      const response = await fetch("/api/exports/html", {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.usageLimit) {
+          setExportError(data.error);
+          return;
+        }
+        throw new Error(data.error || "Failed to export");
+      }
+
+      // If limit check passed, proceed with download
+      const exportHtml = getExportHtml();
+      const blob = new Blob([exportHtml], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "buildix-export.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download HTML:", err);
+      setExportError("Erro ao exportar. Tente novamente.");
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   // Export single image (for post/story)
@@ -549,10 +577,24 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
                 </>
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleDownloadHTML}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Download HTML
+            <DropdownMenuItem onClick={handleDownloadHTML} disabled={isDownloading}>
+              {isDownloading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Download HTML
+                </>
+              )}
             </DropdownMenuItem>
+            {exportError && (
+              <div className="px-2 py-1.5 text-xs text-destructive">
+                {exportError}
+              </div>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => openModal("figmaExport")}>
               <FileUp className="mr-2 h-4 w-4 text-[#a259ff]" />
