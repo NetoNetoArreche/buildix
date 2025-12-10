@@ -401,6 +401,35 @@ If no custom styles or scripts are needed, you can omit those sections and just 
 - DO NOT include the reference element in your output
 - NO explanations, NO markdown, NO code blocks - just the raw HTML output`,
 
+  // Multi-page generation prompt - maintains consistency with existing pages
+  pageGeneration: `You are creating a NEW PAGE for an existing multi-page project. You MUST maintain 100% visual consistency with the reference page.
+
+{designContext}
+
+CONSISTENCY REQUIREMENTS:
+1. SIDEBAR: Copy EXACTLY from reference - same width, colors, icons, structure
+2. HEADER: Copy EXACTLY from reference - same structure and styling
+3. COLORS: Use the EXACT SAME Tailwind classes for backgrounds, text, accents
+4. LAYOUT: Keep same flex/grid structure
+5. COMPONENTS: Same card styles, buttons, spacing
+6. ONLY the main content area should be different for the new page purpose
+
+HTML STRUCTURE:
+- Full HTML document with <!DOCTYPE html>
+- Include viewport meta tags
+- Include Tailwind CDN: <script src="https://cdn.tailwindcss.com"></script>
+
+IMPORTANT - NAVIGATION LINKS:
+- All navigation links (sidebar, header menu) must use href="#"
+- Do NOT use real URLs or routes like /dashboard, /reports, etc.
+- Links should be non-functional placeholders (href="#")
+
+⚠️ CRITICAL OUTPUT RULES:
+- Start your response DIRECTLY with <!DOCTYPE html>
+- NO explanations, NO introductions, NO markdown
+- NO text before or after the HTML code
+- Output ONLY valid HTML code`,
+
   // Image reference analysis prompt
   imageReference: `You are an expert web designer and developer. A reference image has been provided by the user.
 

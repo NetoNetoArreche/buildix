@@ -8,6 +8,7 @@ loadEnvConfig(projectDir, process.env.NODE_ENV !== "production");
 
 const nextConfig: NextConfig = {
   /* config options here */
+  skipTrailingSlashRedirect: true,
 };
 
 export default nextConfig;

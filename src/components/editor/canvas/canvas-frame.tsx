@@ -51,6 +51,12 @@ export function CanvasFrame({
     }
 
     styleEl.textContent = `
+      /* Hide Next.js dev tools elements */
+      nextjs-portal,
+      [id^="__next"],
+      [data-nextjs] {
+        display: none !important;
+      }
       body {
         position: relative !important;
       }
@@ -404,7 +410,33 @@ export function CanvasFrame({
         }
       };
     } else {
-      doc.body.onclick = null;
+      // In Preview mode, prevent ALL navigation from links to avoid "app inside app" issue
+      doc.body.onclick = (e: MouseEvent) => {
+        let target = e.target as HTMLElement;
+
+        // Walk up to find any anchor element
+        while (target && target.tagName !== 'A' && target !== doc.body) {
+          target = target.parentElement as HTMLElement;
+        }
+
+        // If we found an anchor, ALWAYS prevent navigation
+        // This prevents the "app inside app" issue where clicking sidebar links
+        // would load the Buildix app inside the preview iframe
+        if (target && target.tagName === 'A') {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      };
+
+      // Also prevent form submissions
+      const forms = doc.querySelectorAll('form');
+      forms.forEach((form) => {
+        form.onsubmit = (e: Event) => {
+          e.preventDefault();
+          return false;
+        };
+      });
     }
   }, [isDesignMode, onElementSelect]);
 
@@ -415,27 +447,60 @@ export function CanvasFrame({
       // Skip if already processed
       if (oldScript.dataset.buildixProcessed) return;
 
-      const newScript = doc.createElement("script");
-
-      // Copy all attributes
-      Array.from(oldScript.attributes).forEach((attr) => {
-        newScript.setAttribute(attr.name, attr.value);
-      });
-
-      // For inline scripts, wrap in IIFE to avoid variable redeclaration errors
-      if (oldScript.textContent && !oldScript.src) {
-        // Wrap the script content in an IIFE to create a new scope
-        newScript.textContent = `(function() {\n${oldScript.textContent}\n})();`;
-      } else if (oldScript.textContent) {
-        newScript.textContent = oldScript.textContent;
+      // Skip Tailwind CDN - it executes automatically
+      const src = oldScript.getAttribute("src") || "";
+      if (src.includes("tailwindcss") || src.includes("cdn.tailwindcss")) {
+        oldScript.dataset.buildixProcessed = "true";
+        return;
       }
 
-      // Mark as processed to avoid re-processing
-      newScript.dataset.buildixProcessed = "true";
+      // Skip scripts that look like Next.js or framework scripts
+      const scriptContent = oldScript.textContent || "";
+      if (
+        scriptContent.includes("__NEXT") ||
+        scriptContent.includes("_next") ||
+        scriptContent.includes("nextServerDataCallback") ||
+        scriptContent.includes("ReadableStream") ||
+        scriptContent.includes("self.__next") ||
+        src.includes("_next")
+      ) {
+        oldScript.dataset.buildixProcessed = "true";
+        return;
+      }
 
-      // Replace the old script with the new one to trigger execution
-      if (oldScript.parentNode) {
-        oldScript.parentNode.replaceChild(newScript, oldScript);
+      // Skip empty scripts
+      if (!scriptContent.trim() && !src) {
+        oldScript.dataset.buildixProcessed = "true";
+        return;
+      }
+
+      try {
+        const newScript = doc.createElement("script");
+
+        // Copy all attributes
+        Array.from(oldScript.attributes).forEach((attr) => {
+          newScript.setAttribute(attr.name, attr.value);
+        });
+
+        // For inline scripts, wrap in IIFE to avoid variable redeclaration errors
+        if (scriptContent && !src) {
+          // Wrap the script content in an IIFE to create a new scope
+          newScript.textContent = `(function() {\n${scriptContent}\n})();`;
+        } else if (scriptContent) {
+          newScript.textContent = scriptContent;
+        }
+
+        // Mark as processed to avoid re-processing
+        newScript.dataset.buildixProcessed = "true";
+
+        // Replace the old script with the new one to trigger execution
+        if (oldScript.parentNode) {
+          oldScript.parentNode.replaceChild(newScript, oldScript);
+        }
+      } catch (error) {
+        // Silently ignore script execution errors
+        console.warn("[Buildix] Script execution skipped:", error);
+        oldScript.dataset.buildixProcessed = "true";
       }
     });
   }, []);
@@ -534,15 +599,37 @@ export function CanvasFrame({
 
     const handleLoad = () => {
       const doc = iframe.contentDocument;
-      if (!doc) return;
+      if (!doc || !doc.body) return;
 
       isInitializedRef.current = true;
+
+      // Remove any Next.js dev tools elements that may have been injected
+      try {
+        const nextjsElements = doc.querySelectorAll('nextjs-portal, [id^="__next"], [data-nextjs]');
+        nextjsElements.forEach(el => el.remove());
+
+        // Also hide any text nodes that contain Next.js code (like the IIFE wrapper)
+        if (doc.body) {
+          const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, null);
+          const nodesToRemove: Node[] = [];
+          while (walker.nextNode()) {
+            const text = walker.currentNode.textContent || '';
+            if (text.includes('nextjs-portal') || text.includes('__nextjs') || text.includes('nextServerDataCallback')) {
+              nodesToRemove.push(walker.currentNode);
+            }
+          }
+          nodesToRemove.forEach(node => node.parentNode?.removeChild(node));
+        }
+      } catch (e) {
+        // Ignore cleanup errors
+      }
 
       // Re-apply styles to ensure CSS is properly parsed
       reApplyStyles(doc);
 
-      // Re-execute scripts since srcdoc doesn't always trigger script execution
-      reExecuteScripts(doc);
+      // NOTE: We no longer re-execute scripts as it causes issues with Next.js dev tools
+      // Scripts in srcdoc execute automatically, and Tailwind CDN loads fine
+      // The reExecuteScripts was causing "Unexpected token '<'" errors
 
       // Skip injection during streaming for better performance
       if (!isStreaming) {
@@ -555,7 +642,7 @@ export function CanvasFrame({
     return () => {
       iframe.removeEventListener("load", handleLoad);
     };
-  }, [html, injectSelectionBehavior, isStreaming, reExecuteScripts, reApplyStyles, extractHtmlParts, onlyBodyChanged]);
+  }, [html, injectSelectionBehavior, isStreaming, reApplyStyles, extractHtmlParts, onlyBodyChanged]);
 
   // Update selection styles when mode changes
   useEffect(() => {

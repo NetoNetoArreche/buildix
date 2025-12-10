@@ -9,9 +9,10 @@ export type { AIModel };
 interface GenerateOptions {
   prompt: string;
   model: AIModel;
-  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "insertAfter";
+  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "insertAfter" | "page-generation";
   currentHtml?: string;
   elementHtml?: string;
+  designContext?: string; // For multi-page consistency - design tokens extracted from other pages
   onStream?: (chunk: string) => void;
   referenceImage?: {
     data: string; // base64 encoded image data (without data URL prefix)
@@ -41,6 +42,7 @@ export function useAI(): UseAIReturn {
         type = "generation",
         currentHtml,
         elementHtml,
+        designContext,
         onStream,
         referenceImage,
       } = options;
@@ -65,6 +67,7 @@ export function useAI(): UseAIReturn {
               type,
               currentHtml,
               elementHtml,
+              designContext,
               referenceImage,
             }),
           });

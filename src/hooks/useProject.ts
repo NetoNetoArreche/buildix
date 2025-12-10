@@ -20,6 +20,7 @@ interface UseProjectReturn {
   createProject: (name: string, description?: string) => Promise<Project | null>;
   updateProject: (projectId: string, data: Partial<Project>) => Promise<Project | null>;
   deleteProject: (projectId: string) => Promise<boolean>;
+  createPage: (projectId: string, name: string, slug?: string) => Promise<Page | null>;
   savePage: (projectId: string, pageId: string, htmlContent: string, cssContent?: string, backgroundAssets?: BackgroundAsset[], canvasSettings?: CanvasSettings) => Promise<Page | null>;
   saveChat: (projectId: string, role: string, content: string, model?: string) => Promise<ChatMessageType | null>;
 }
@@ -162,6 +163,54 @@ export function useProject(): UseProjectReturn {
     }
   }, []);
 
+  const createPage = useCallback(async (
+    projectId: string,
+    name: string,
+    slug?: string
+  ): Promise<Page | null> => {
+    try {
+      // Generate slug from name if not provided
+      const pageSlug = slug || name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+
+      const response = await fetch(`/api/projects/${projectId}/pages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          slug: pageSlug,
+          htmlContent: "", // Start with empty content - will be filled by AI generation
+          isHome: false,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to create page");
+      }
+
+      const newPage = await response.json();
+      console.log("[useProject] Created new page:", newPage.name, newPage.id);
+
+      // Update project state with the new page
+      setProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: [...prev.pages, newPage],
+        };
+      });
+
+      // Switch to the new page
+      setCurrentPage(newPage);
+      setHtmlContent("");
+
+      return newPage;
+    } catch (err) {
+      console.error("Error creating page:", err);
+      return null;
+    }
+  }, [setCurrentPage, setHtmlContent]);
+
   const savePage = useCallback(async (
     projectId: string,
     pageId: string,
@@ -231,6 +280,7 @@ export function useProject(): UseProjectReturn {
     createProject,
     updateProject,
     deleteProject,
+    createPage,
     savePage,
     saveChat,
   };

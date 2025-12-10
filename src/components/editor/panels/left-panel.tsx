@@ -53,6 +53,7 @@ import type { AIModel, ContentType } from "@/types";
 import { CONTENT_TYPE_OPTIONS } from "@/lib/constants/instagram-dimensions";
 import { type CodeSnippet, type SelectedSnippet } from "@/lib/code-snippets";
 import { type UIComponent, type SelectedComponent } from "@/lib/ui-components";
+import { extractProjectDesignContext } from "@/lib/ai/design-tokens";
 
 interface ChatMessage {
   id: string;
@@ -61,6 +62,7 @@ interface ChatMessage {
   model?: AIModel;
   generatedHtml?: string;
   error?: boolean;
+  showPreviewButton?: boolean;
   createdAt: Date;
 }
 
@@ -82,7 +84,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     clearStreaming,
   } = useEditorStore();
   const { generate, error: aiError } = useAI();
-  const { savePage, saveChat, updateProject } = useProject();
+  const { savePage, saveChat, updateProject, createPage } = useProject();
 
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<AIModel>("gemini");
@@ -308,7 +310,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
         clearStreaming(); // Clear streaming state
 
         const assistantContent = result
-          ? "Design generated successfully! You can see the preview in the canvas."
+          ? "Design gerado com sucesso! Clique no botao abaixo para ver o preview."
           : `Sorry, I encountered an error: ${aiError || "Unknown error"}`;
 
         const assistantMessage: ChatMessage = {
@@ -318,6 +320,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
           model: modelToUse,
           generatedHtml: result || undefined,
           error: !result,
+          showPreviewButton: !!result,
           createdAt: new Date(),
         };
 
@@ -528,10 +531,81 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     // NOTE: We check htmlContent only, not messages.length, because:
     // - User may load an existing project (HTML exists but no messages)
     // - User may refresh the page (HTML exists but messages are cleared)
-    const isRevision = !!htmlContent && htmlContent.trim().length > 0 && contentType === "landing";
+    const hasExistingHtml = !!htmlContent && htmlContent.trim().length > 0;
+
+    // Detect if user wants to create a NEW page from the prompt
+    // This allows creating new pages even when on a page with existing content
+    // Pattern captures the page name (e.g., "crie pagina products" -> "products")
+    const newPagePattern = /(?:cri[ae]|gere|fa[çc]a|nova|create|make|build|new|adicion[ae])\s*(?:a\s*)?(?:p[aá]gina|page)\s*(?:de\s*)?(\w+)/i;
+    const newPageMatch = newPagePattern.exec(currentPrompt);
+    const wantsNewPage = !!newPageMatch;
+    const extractedPageName = newPageMatch ? newPageMatch[1] : null;
+
+    console.log("[LeftPanel] Detection - hasExistingHtml:", hasExistingHtml, "wantsNewPage:", wantsNewPage, "extractedPageName:", extractedPageName, "prompt:", currentPrompt.substring(0, 50));
+
+    // Track which page to save to (may change if we create a new page)
+    let targetPageId = currentPage?.id;
+
+    // If user wants to create a new page and current page has content, create the new page first
+    if (wantsNewPage && hasExistingHtml && extractedPageName && projectId) {
+      // Format the page name (capitalize first letter)
+      const formattedPageName = extractedPageName.charAt(0).toUpperCase() + extractedPageName.slice(1).toLowerCase();
+
+      console.log("[LeftPanel] Creating new page:", formattedPageName);
+
+      // Create the new page - this will also switch to it
+      const newPage = await createPage(projectId, formattedPageName);
+
+      if (newPage) {
+        console.log("[LeftPanel] New page created successfully:", newPage.id);
+        targetPageId = newPage.id;
+      } else {
+        console.error("[LeftPanel] Failed to create new page");
+      }
+    }
+
+    // Check for multi-page context when:
+    // 1. Current page has no HTML (truly new page), OR
+    // 2. User explicitly wants to create a new page (detected from prompt)
+    // This enables design consistency across multiple pages in a project
+    let designContext: string | undefined;
+    const isNewPage = !hasExistingHtml || (wantsNewPage && hasExistingHtml);
+    const shouldUseDesignContext = (isNewPage || wantsNewPage) && contentType === "landing";
+
+    if (shouldUseDesignContext && project?.pages && project.pages.length > 0) {
+      // Find the reference page: prefer home page with content, otherwise first page with content
+      // If user wants new page but current page has content, use current page as reference
+      let referencePage = null;
+
+      if (wantsNewPage && hasExistingHtml && currentPage?.id) {
+        // Use current page as reference when creating a new page
+        referencePage = project.pages.find(p => p.id === currentPage.id && p.htmlContent?.trim());
+      }
+
+      if (!referencePage) {
+        // Try to find home page with content, or any page with content
+        referencePage = project.pages.find(p => p.isHome && p.htmlContent?.trim())
+          || project.pages.find(p => p.id !== currentPage?.id && p.htmlContent?.trim());
+      }
+
+      if (referencePage?.htmlContent) {
+        // Send full HTML as reference for better consistency
+        designContext = `
+REFERENCE PAGE HTML (COPY THE DESIGN EXACTLY):
+${referencePage.htmlContent}
+
+NEW PAGE NAME: ${extractedPageName || 'new page'}
+`;
+        console.log("[LeftPanel] Multi-page consistency: using full HTML from reference page, wantsNewPage:", wantsNewPage);
+      }
+    }
+
+    // Determine if this is actually a revision
+    // It's a revision ONLY if there's existing HTML AND user is NOT asking to create a new page
+    const isRevision = hasExistingHtml && !wantsNewPage && contentType === "landing";
 
     // Determine the generation type
-    let generationType: "generation" | "revision" | "revision-with-image" | "editing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference";
+    let generationType: "generation" | "revision" | "revision-with-image" | "editing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "page-generation";
     if (contentType !== "landing") {
       // For Instagram types, use the content type directly
       generationType = contentType;
@@ -544,8 +618,11 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     } else if (isRevision) {
       // Normal revision - modify existing HTML
       generationType = "revision";
+    } else if (designContext) {
+      // New page with design context from other pages - use page-generation for consistency
+      generationType = "page-generation";
     } else {
-      // New generation
+      // New generation (first page or no context available)
       generationType = "generation";
     }
 
@@ -556,6 +633,8 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
       type: generationType,
       // Always send currentHtml when it exists, so AI knows what to preserve
       currentHtml: isRevision ? htmlContent : undefined,
+      // Include design context for multi-page consistency
+      designContext: designContext,
       referenceImage: currentReferenceImage ? {
         data: currentReferenceImage.data,
         mimeType: currentReferenceImage.mimeType,
@@ -574,7 +653,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     clearStreaming(); // Clear streaming state
 
     const assistantContent = result
-      ? "Design generated successfully! You can see the preview in the canvas."
+      ? "Design gerado com sucesso! Clique no botao abaixo para ver o preview."
       : `Sorry, I encountered an error: ${aiError || "Unknown error"}`;
 
     const assistantMessage: ChatMessage = {
@@ -584,6 +663,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
       model: selectedModel,
       generatedHtml: result || undefined,
       error: !result,
+      showPreviewButton: !!result,
       createdAt: new Date(),
     };
 
@@ -598,9 +678,9 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     if (result) {
       setHtmlContent(result);
 
-      // Save generated HTML to database
-      if (projectId && currentPage?.id) {
-        await savePage(projectId, currentPage.id, result);
+      // Save generated HTML to database (use targetPageId which may be a newly created page)
+      if (projectId && targetPageId) {
+        await savePage(projectId, targetPageId, result);
 
         // Generate and save thumbnail after a delay for iframe to render
         const thumbnail = await generateThumbnailWithDelay(800);
@@ -649,7 +729,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     clearStreaming(); // Clear streaming state
 
     const assistantContent = result
-      ? "Design generated successfully! You can see the preview in the canvas."
+      ? "Design gerado com sucesso! Clique no botao abaixo para ver o preview."
       : `Sorry, I encountered an error: ${aiError || "Unknown error"}`;
 
     const assistantMessage: ChatMessage = {
@@ -659,6 +739,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
       model: selectedModel,
       generatedHtml: result || undefined,
       error: !result,
+      showPreviewButton: !!result,
       createdAt: new Date(),
     };
 
@@ -688,6 +769,15 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
   const handleViewCode = (html: string) => {
     // Copy to clipboard
     navigator.clipboard.writeText(html);
+  };
+
+  const handleViewPreview = () => {
+    // Scroll to and focus the preview iframe
+    const iframe = document.querySelector('iframe[title^="Preview"]') as HTMLIFrameElement;
+    if (iframe) {
+      iframe.scrollIntoView({ behavior: "smooth", block: "center" });
+      iframe.focus();
+    }
   };
 
   const handleRegenerate = async (originalPrompt: string) => {
@@ -794,6 +884,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
                   message={message}
                   onViewCode={handleViewCode}
                   onRegenerate={handleRegenerate}
+                  onViewPreview={handleViewPreview}
                 />
               ))
             )}
@@ -1098,12 +1189,14 @@ interface ChatMessageComponentProps {
   message: ChatMessage;
   onViewCode: (html: string) => void;
   onRegenerate: (prompt: string) => void;
+  onViewPreview?: () => void;
 }
 
 function ChatMessageComponent({
   message,
   onViewCode,
   onRegenerate,
+  onViewPreview,
 }: ChatMessageComponentProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -1141,16 +1234,19 @@ function ChatMessageComponent({
         )}
       >
         <p className="text-sm leading-relaxed">{message.content}</p>
+        {!isUser && !message.error && message.showPreviewButton && (
+          <Button
+            variant="buildix"
+            size="sm"
+            className="mt-2 w-full"
+            onClick={onViewPreview}
+          >
+            <Eye className="mr-2 h-4 w-4" />
+            Ver Preview
+          </Button>
+        )}
         {!isUser && !message.error && message.generatedHtml && (
           <div className="flex items-center gap-1 pt-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <Eye className="h-3 w-3" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>View in Canvas</TooltipContent>
-            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

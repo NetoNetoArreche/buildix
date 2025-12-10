@@ -265,7 +265,7 @@ export default function EditorPage() {
   return (
     <div className="flex h-screen flex-col bg-background">
       {/* Editor Header */}
-      <EditorHeader projectId={projectId} projectName={project?.name} />
+      <EditorHeader projectId={projectId} projectName={project?.name} pages={project?.pages} />
 
       {/* Main Editor Area */}
       <div className="flex flex-1 overflow-hidden">

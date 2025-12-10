@@ -14,6 +14,7 @@ import {
   Plus,
   Sparkles,
   Users,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,11 @@ const mainNavItems = [
 ];
 
 const bottomNavItems = [
+  {
+    title: "Pricing",
+    href: "/pricing",
+    icon: CreditCard,
+  },
   {
     title: "Settings",
     href: "/settings",

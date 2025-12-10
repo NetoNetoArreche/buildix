@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { streamWithGemini } from "@/lib/ai/gemini";
 import { streamWithClaude } from "@/lib/ai/claude";
 import { SYSTEM_PROMPTS } from "@/lib/ai/prompts";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +15,28 @@ export async function POST(request: NextRequest) {
         JSON.stringify({ error: "Prompt is required" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // Check authentication and usage limits
+    const user = await getAuthenticatedUser();
+    const ADMIN_EMAIL = "helioarreche@gmail.com";
+    const isAdmin = user?.email === ADMIN_EMAIL;
+
+    // Admin não tem limite de uso
+    if (user && !isAdmin) {
+      const { allowed, usage, plan } = await canUseFeature(user.id, "prompts");
+      if (!allowed) {
+        const message = getUsageLimitMessage("prompts", plan);
+        return new Response(
+          JSON.stringify({
+            error: message,
+            usageLimit: true,
+            usage,
+            plan,
+          }),
+          { status: 429, headers: { "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Select system prompt based on type
@@ -61,6 +85,14 @@ export async function POST(request: NextRequest) {
       case "image-reference":
         systemPrompt = SYSTEM_PROMPTS.imageReference;
         break;
+      // Page generation with design context - maintains consistency across multi-page projects
+      case "page-generation":
+        systemPrompt = SYSTEM_PROMPTS.pageGeneration.replace(
+          "{designContext}",
+          body.designContext || "No existing design context available."
+        );
+        console.log("[Stream API] Using page-generation prompt with design context");
+        break;
       default:
         systemPrompt = SYSTEM_PROMPTS.generation;
     }
@@ -96,6 +128,13 @@ export async function POST(request: NextRequest) {
           }
 
           console.log(`[Stream API] Stream complete. Total chunks: ${chunkCount}`);
+
+          // Increment usage on successful completion
+          if (user) {
+            await incrementUsage(user.id, "prompts");
+            console.log(`[Stream API] Usage incremented for user ${user.id}`);
+          }
+
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
           controller.close();
         } catch (error) {

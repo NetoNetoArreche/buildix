@@ -15,6 +15,7 @@ type ModalType =
   | "figmaImport"
   | "figmaExport"
   | "figmaTokens"
+  | "pageTransitions"
   | null;
 
 type PanelType = "left" | "right";

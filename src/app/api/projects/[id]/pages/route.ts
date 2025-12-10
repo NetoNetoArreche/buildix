@@ -64,14 +64,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     }
 
-    const page = await prisma.page.create({
-      data: {
-        projectId,
-        name,
-        slug,
-        htmlContent:
-          htmlContent ||
-          `<!DOCTYPE html>
+    // Use provided htmlContent (even if empty string) or fallback to default template
+    // Empty string is valid - it means AI will generate the content
+    const finalHtmlContent = htmlContent !== undefined && htmlContent !== null
+      ? htmlContent
+      : `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -87,7 +84,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     <h1>${name}</h1>
   </main>
 </body>
-</html>`,
+</html>`;
+
+    const page = await prisma.page.create({
+      data: {
+        projectId,
+        name,
+        slug,
+        htmlContent: finalHtmlContent,
         cssContent,
         isHome: isHome || false,
       },

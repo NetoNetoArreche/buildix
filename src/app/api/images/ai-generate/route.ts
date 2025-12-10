@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
 // Initialize S3 client
 const getS3Client = () => {
@@ -88,6 +89,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Prompt is required", images: [] },
         { status: 400 }
+      );
+    }
+
+    // Check usage limits for images
+    const { allowed, usage, plan } = await canUseFeature(user.id, "images");
+    if (!allowed) {
+      const message = getUsageLimitMessage("images", plan);
+      return NextResponse.json(
+        { error: message, usageLimit: true, usage, plan, images: [] },
+        { status: 429 }
       );
     }
 
@@ -192,6 +203,10 @@ export async function POST(req: NextRequest) {
         images: [],
       });
     }
+
+    // Increment usage for successful image generation
+    await incrementUsage(user.id, "images", images.length);
+    console.log(`[AI Generate] Usage incremented: ${images.length} images for user ${user.id}`);
 
     return NextResponse.json({ images });
   } catch (error) {

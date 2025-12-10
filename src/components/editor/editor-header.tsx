@@ -31,6 +31,9 @@ import {
   Upload,
   FileUp,
   Figma,
+  Home,
+  Plus,
+  ArrowRightLeft,
 } from "lucide-react";
 import { toPng, toBlob } from "html-to-image";
 import JSZip from "jszip";
@@ -57,18 +60,20 @@ import { useProject } from "@/hooks/useProject";
 import { generateThumbnail } from "@/lib/thumbnail";
 import { cn } from "@/lib/utils";
 import type { ViewMode, DeviceMode } from "@/types";
+import type { Page } from "@prisma/client";
 
 interface EditorHeaderProps {
   projectId: string;
   projectName?: string;
+  pages?: Page[];
 }
 
-export function EditorHeader({ projectId, projectName }: EditorHeaderProps) {
+export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isUpdatingThumbnail, setIsUpdatingThumbnail] = useState(false);
   const [thumbnailUpdated, setThumbnailUpdated] = useState(false);
-  const { viewMode, setViewMode, deviceMode, setDeviceMode, zoom, setZoom, undo, redo, canUndo, canRedo, htmlContent, backgroundAssets, showLayersPanel, toggleLayersPanel, syncHtmlFromIframe } =
+  const { viewMode, setViewMode, deviceMode, setDeviceMode, zoom, setZoom, undo, redo, canUndo, canRedo, htmlContent, backgroundAssets, showLayersPanel, toggleLayersPanel, syncHtmlFromIframe, currentPage, setCurrentPage } =
     useEditorStore();
   const { openModal } = useUIStore();
   const { openPublishModal } = useCommunityStore();
@@ -284,15 +289,34 @@ export function EditorHeader({ projectId, projectName }: EditorHeaderProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1">
-              home
+              {currentPage?.name || "home"}
               <ChevronDown className="h-3.5 w-3.5 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem>home</DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {pages?.map((page) => (
+              <DropdownMenuItem
+                key={page.id}
+                onClick={() => setCurrentPage(page)}
+                className={cn(
+                  currentPage?.id === page.id && "bg-accent"
+                )}
+              >
+                {page.isHome && <Home className="h-3 w-3 mr-2" />}
+                {page.name}
+                {currentPage?.id === page.id && (
+                  <Check className="h-3 w-3 ml-auto" />
+                )}
+              </DropdownMenuItem>
+            ))}
+            {pages && pages.length > 0 && <DropdownMenuSeparator />}
             <DropdownMenuItem>
-              <span className="text-muted-foreground">+ Add Page</span>
+              <Plus className="h-3 w-3 mr-2" />
+              <span className="text-muted-foreground">Add Page</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => openModal("pageTransitions")}>
+              <ArrowRightLeft className="h-3 w-3 mr-2" />
+              <span className="text-muted-foreground">Page Transitions</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
