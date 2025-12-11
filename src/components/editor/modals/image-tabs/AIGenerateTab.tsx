@@ -90,13 +90,6 @@ export function AIGenerateTab({ onSelect }: AIGenerateTabProps) {
     onSelect(image.url);
   };
 
-  const handleEditClick = (image: ImageItem) => {
-    setEditingImage(image);
-    setIsEditMode(true);
-    setEditPrompt("");
-    setError(null);
-  };
-
   const handleEditImage = async () => {
     if (!editingImage || !editPrompt.trim()) return;
 
@@ -323,7 +316,6 @@ export function AIGenerateTab({ onSelect }: AIGenerateTabProps) {
             isLoading={isGenerating}
             selectedId={selectedId}
             onSelect={handleImageSelect}
-            onEdit={handleEditClick}
             emptyMessage="No images generated yet"
           />
         )}
