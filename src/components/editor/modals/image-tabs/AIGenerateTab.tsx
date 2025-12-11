@@ -85,7 +85,7 @@ export function AIGenerateTab({ onSelect }: AIGenerateTabProps) {
     }
   };
 
-  const handleSelect = (image: ImageItem) => {
+  const handleImageSelect = (image: ImageItem) => {
     setSelectedId(image.id);
     onSelect(image.url);
   };
@@ -121,12 +121,9 @@ export function AIGenerateTab({ onSelect }: AIGenerateTabProps) {
       }
 
       if (data.image) {
-        // Add the edited image to the list
         setImages((prev) => [data.image, ...prev]);
-        // Select the new edited image
         setSelectedId(data.image.id);
         onSelect(data.image.url);
-        // Exit edit mode
         setIsEditMode(false);
         setEditingImage(null);
         setEditPrompt("");
@@ -317,37 +314,18 @@ export function AIGenerateTab({ onSelect }: AIGenerateTabProps) {
             <h3 className="mb-2 text-lg font-medium">Generate with AI</h3>
             <p className="max-w-sm text-sm text-muted-foreground">
               Describe the image you want and our AI will create it for you.
-              Try adding style presets for better results.
+              Perfect for unique backgrounds and illustrations.
             </p>
           </div>
         ) : (
-          <div className="h-full flex flex-col gap-3">
-            <ImageGrid
-              images={images}
-              isLoading={isGenerating}
-              selectedId={selectedId}
-              onSelect={handleSelect}
-              emptyMessage="No images generated yet"
-            />
-
-            {/* Edit button for selected image */}
-            {selectedId && images.length > 0 && (
-              <div className="flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const selected = images.find((img) => img.id === selectedId);
-                    if (selected) handleEditClick(selected);
-                  }}
-                  className="gap-2"
-                >
-                  <Pencil className="h-3 w-3" />
-                  Edit Selected Image with AI
-                </Button>
-              </div>
-            )}
-          </div>
+          <ImageGrid
+            images={images}
+            isLoading={isGenerating}
+            selectedId={selectedId}
+            onSelect={handleImageSelect}
+            onEdit={handleEditClick}
+            emptyMessage="No images generated yet"
+          />
         )}
       </div>
     </div>

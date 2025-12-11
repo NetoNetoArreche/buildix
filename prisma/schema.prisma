@@ -396,3 +396,45 @@ model Usage {
   @@index([userId, periodEnd])
   @@map("usages")
 }
+
+// ============================================
+// LEARN & CHANGELOG MODELS
+// ============================================
+
+// Tutorial - Learn page tutorials/guides
+model Tutorial {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String?
+  content     String   @db.Text // Markdown content
+  videoUrl    String? // YouTube/Vimeo embed URL
+  thumbnail   String?
+  category    String // "getting-started", "prompts", "advanced", "tips"
+  order       Int      @default(0)
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, order])
+  @@index([isPublished])
+  @@map("tutorials")
+}
+
+// ChangelogEntry - Changelog page entries
+model ChangelogEntry {
+  id          String   @id @default(cuid())
+  version     String? // "v1.2.0"
+  title       String
+  description String   @db.Text // Markdown content
+  type        String // "feature", "improvement", "fix", "announcement"
+  imageUrl    String?
+  isPublished Boolean  @default(false)
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([isPublished, publishedAt])
+  @@map("changelog_entries")
+}

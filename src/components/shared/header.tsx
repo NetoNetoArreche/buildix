@@ -3,7 +3,6 @@
 import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "@/components/auth/UserMenu";
 
 interface HeaderProps {
@@ -28,8 +27,6 @@ export function Header({ title }: HeaderProps) {
 
       {/* Right side - Actions */}
       <div className="flex items-center gap-2">
-        <ThemeToggle />
-
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[hsl(var(--buildix-primary))]" />

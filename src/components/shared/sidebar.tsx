@@ -13,6 +13,9 @@ import {
   Sparkles,
   Users,
   CreditCard,
+  Layers,
+  GraduationCap,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -43,6 +46,11 @@ const mainNavItems = [
     icon: Users,
   },
   {
+    title: "Components",
+    href: "/components",
+    icon: Layers,
+  },
+  {
     title: "Assets",
     href: "/assets",
     icon: Image,
@@ -50,6 +58,16 @@ const mainNavItems = [
 ];
 
 const bottomNavItems = [
+  {
+    title: "Learn",
+    href: "/learn",
+    icon: GraduationCap,
+  },
+  {
+    title: "Changelog",
+    href: "/changelog",
+    icon: History,
+  },
   {
     title: "Pricing",
     href: "/pricing",

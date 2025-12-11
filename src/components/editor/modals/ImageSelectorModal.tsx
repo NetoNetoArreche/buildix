@@ -99,7 +99,7 @@ export function ImageSelectorModal({
               </TabsTrigger>
               <TabsTrigger value="ai" className="gap-2">
                 <Sparkles className="h-4 w-4" />
-                <span className="hidden sm:inline">AI Generate</span>
+                <span className="hidden sm:inline">AI</span>
               </TabsTrigger>
             </TabsList>
           </div>

@@ -12,6 +12,8 @@ import {
   Settings,
   ArrowLeft,
   Shield,
+  GraduationCap,
+  History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,6 +42,16 @@ const navItems = [
     title: "Templates",
     href: "/admin/templates",
     icon: FileCode,
+  },
+  {
+    title: "Tutorials",
+    href: "/admin/tutorials",
+    icon: GraduationCap,
+  },
+  {
+    title: "Changelog",
+    href: "/admin/changelog",
+    icon: History,
   },
   {
     title: "Users",

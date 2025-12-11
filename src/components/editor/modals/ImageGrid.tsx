@@ -21,6 +21,7 @@ interface ImageGridProps {
   selectedId?: string | null;
   onSelect: (image: ImageItem) => void;
   emptyMessage?: string;
+  renderBadge?: (image: ImageItem) => React.ReactNode;
 }
 
 export function ImageGrid({
@@ -29,6 +30,7 @@ export function ImageGrid({
   selectedId,
   onSelect,
   emptyMessage = "No images found",
+  renderBadge,
 }: ImageGridProps) {
   const [loadingImages, setLoadingImages] = useState<Set<string>>(new Set());
 
@@ -100,6 +102,7 @@ export function ImageGrid({
                 onError={() => handleImageError(image.id)}
                 loading="lazy"
               />
+              {renderBadge && renderBadge(image)}
               {selectedId === image.id && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
                   <div className="rounded-full bg-[hsl(var(--buildix-primary))] p-1">
