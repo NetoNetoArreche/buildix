@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
+import { CosmosLogo } from "@/components/shared/cosmos-logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -45,7 +46,8 @@ function LoginForm() {
 
   return (
     <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg">
-      <div className="text-center">
+      <div className="flex flex-col items-center text-center">
+        <CosmosLogo className="h-16 w-16 mb-4" />
         <h1 className="text-2xl font-bold">Welcome to Buildix</h1>
         <p className="mt-2 text-muted-foreground">
           Sign in to your account to continue
@@ -146,7 +148,8 @@ function LoginForm() {
 function LoginFallback() {
   return (
     <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg">
-      <div className="text-center">
+      <div className="flex flex-col items-center text-center">
+        <CosmosLogo className="h-16 w-16 mb-4" />
         <h1 className="text-2xl font-bold">Welcome to Buildix</h1>
         <p className="mt-2 text-muted-foreground">Loading...</p>
       </div>

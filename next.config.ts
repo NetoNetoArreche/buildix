@@ -9,6 +9,13 @@ loadEnvConfig(projectDir, process.env.NODE_ENV !== "production");
 const nextConfig: NextConfig = {
   /* config options here */
   skipTrailingSlashRedirect: true,
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "50mb",
+    },
+    // Limite para requests processados pelo proxy (Next.js 16)
+    proxyClientMaxBodySize: "50mb",
+  },
 };
 
 export default nextConfig;

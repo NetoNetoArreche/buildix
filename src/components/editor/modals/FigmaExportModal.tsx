@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Check, AlertCircle, Figma } from "lucide-react";
+import { Loader2, Check, AlertCircle, Figma, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEditorStore } from "@/stores/editorStore";
+import { injectBackgroundAssets } from "@/lib/background-assets";
+import { preprocessHtmlForFigma, hasProblematicUrls } from "@/lib/figma-image-processor";
 
 interface FigmaExportModalProps {
   open: boolean;
@@ -20,12 +22,27 @@ interface FigmaExportModalProps {
 
 export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) {
   const [isConverting, setIsConverting] = useState(false);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [imageWarnings, setImageWarnings] = useState<string[]>([]);
+  const [processedCount, setProcessedCount] = useState(0);
   const clipboardDataRef = useRef<string | null>(null);
 
-  const { htmlContent } = useEditorStore();
+  const { htmlContent, backgroundAssets, viewMode, syncHtmlFromIframe } = useEditorStore();
+
+  // Get the complete HTML with background assets
+  const getCompleteHtml = (): string => {
+    // Sync from iframe first if in design mode to get latest changes
+    if (viewMode === "design") {
+      syncHtmlFromIframe();
+    }
+    // Get the updated htmlContent from the store
+    const currentHtml = useEditorStore.getState().htmlContent;
+    // Inject background assets into the HTML
+    return injectBackgroundAssets(currentHtml, backgroundAssets);
+  };
 
   // Reset state when modal opens and start conversion
   useEffect(() => {
@@ -33,7 +50,10 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
       setError(null);
       setSuccess(false);
       setIsConverting(false);
+      setIsProcessingImages(false);
       setIsReady(false);
+      setImageWarnings([]);
+      setProcessedCount(0);
       clipboardDataRef.current = null;
 
       // Start conversion immediately when modal opens
@@ -41,24 +61,59 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
         convertToFigma();
       }
     }
-  }, [open, htmlContent]);
+  }, [open]);
 
   const convertToFigma = async () => {
-    if (!htmlContent) {
-      setError("Nenhum conteúdo para exportar. Crie um design primeiro.");
+    const completeHtml = getCompleteHtml();
+
+    if (!completeHtml) {
+      setError("Nenhum conteudo para exportar. Crie um design primeiro.");
       return;
     }
 
-    setIsConverting(true);
+    setIsProcessingImages(true);
     setError(null);
 
     try {
+      // Step 1: Check for problematic URLs
+      const urlCheck = hasProblematicUrls(completeHtml);
+
+      if (urlCheck.hasBlobUrls || urlCheck.hasRelativeUrls || urlCheck.hasExternalUrls) {
+        console.log("[FigmaExport] Processing images...", {
+          blobUrls: urlCheck.blobUrls.length,
+          relativeUrls: urlCheck.relativeUrls.length,
+          externalUrls: urlCheck.externalUrls.length,
+        });
+      }
+
+      // Step 2: Preprocess images (convert blobs, relative, and external URLs to base64)
+      const processResult = await preprocessHtmlForFigma(completeHtml, {
+        convertBlobsToBase64: true,
+        convertRelativeToAbsolute: true,
+        convertExternalToBase64: true,
+      });
+
+      setProcessedCount(processResult.processedImages);
+
+      if (processResult.warnings.length > 0) {
+        setImageWarnings(processResult.warnings);
+        console.warn("[FigmaExport] Image warnings:", processResult.warnings);
+      }
+
+      if (processResult.failedImages.length > 0) {
+        console.warn("[FigmaExport] Failed images:", processResult.failedImages);
+      }
+
+      setIsProcessingImages(false);
+      setIsConverting(true);
+
+      // Step 3: Send processed HTML to API
       const response = await fetch("/api/figma/export", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ html: htmlContent }),
+        body: JSON.stringify({ html: processResult.html }),
       });
 
       const data = await response.json();
@@ -72,15 +127,16 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
       setIsReady(true);
     } catch (err) {
       console.error("Failed to convert to Figma:", err);
-      setError(err instanceof Error ? err.message : "Falha na conversão");
+      setError(err instanceof Error ? err.message : "Falha na conversao");
     } finally {
       setIsConverting(false);
+      setIsProcessingImages(false);
     }
   };
 
   const handleCopyToFigma = async () => {
     if (!clipboardDataRef.current) {
-      setError("Dados não prontos. Tente novamente.");
+      setError("Dados nao prontos. Tente novamente.");
       return;
     }
 
@@ -120,7 +176,7 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
       }
     } catch (err) {
       console.error("Failed to copy to clipboard:", err);
-      setError("Falha ao copiar. Verifique as permissões do navegador.");
+      setError("Falha ao copiar. Verifique as permissoes do navegador.");
     }
   };
 
@@ -146,12 +202,23 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
         <div className="space-y-4 py-4">
           {/* Status */}
           <div className="bg-[#252525] rounded-lg p-4 border border-[#333]">
-            {isConverting ? (
+            {isProcessingImages ? (
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-[#a259ff]" />
+                <div>
+                  <p className="text-sm text-white font-medium">Processando imagens...</p>
+                  <p className="text-xs text-gray-400">Convertendo URLs para formato compativel</p>
+                </div>
+              </div>
+            ) : isConverting ? (
               <div className="flex items-center gap-3">
                 <Loader2 className="h-5 w-5 animate-spin text-[#a259ff]" />
                 <div>
                   <p className="text-sm text-white font-medium">Convertendo para Figma...</p>
-                  <p className="text-xs text-gray-400">Transformando HTML em layers editáveis</p>
+                  <p className="text-xs text-gray-400">
+                    Transformando HTML em layers editaveis
+                    {processedCount > 0 && ` (${processedCount} imagens processadas)`}
+                  </p>
                 </div>
               </div>
             ) : isReady ? (
@@ -160,19 +227,32 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
                 <div>
                   <p className="text-sm text-white font-medium">Pronto para copiar!</p>
                   <p className="text-xs text-gray-400">
-                    Clique no botão abaixo e depois cole no Figma com{" "}
+                    Clique no botao abaixo e depois cole no Figma com{" "}
                     <kbd className="px-1.5 py-0.5 bg-[#333] rounded text-xs font-mono">Ctrl+V</kbd>
                   </p>
                 </div>
               </div>
             ) : (
               <p className="text-sm text-gray-300 leading-relaxed">
-                Clique no botão abaixo para converter e copiar o design. Depois, vá ao Figma e pressione{" "}
+                Clique no botao abaixo para converter e copiar o design. Depois, va ao Figma e pressione{" "}
                 <kbd className="px-1.5 py-0.5 bg-[#333] rounded text-xs font-mono">Ctrl+V</kbd>{" "}
-                para colar. O design será convertido automaticamente em layers editáveis.
+                para colar. O design sera convertido automaticamente em layers editaveis.
               </p>
             )}
           </div>
+
+          {/* Image Warnings */}
+          {imageWarnings.length > 0 && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-yellow-400 font-medium">Aviso sobre imagens</p>
+                <p className="text-xs text-yellow-400/80 mt-1">
+                  {imageWarnings.length} imagem(ns) podem nao aparecer corretamente no Figma.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (
@@ -204,13 +284,18 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
           </Button>
           <Button
             onClick={handleCopyToFigma}
-            disabled={isConverting || !isReady || !htmlContent || success}
+            disabled={isConverting || isProcessingImages || !isReady || !htmlContent || success}
             className={cn(
               "bg-[#a259ff] hover:bg-[#a259ff]/90 text-white font-medium",
-              (isConverting || !isReady) && "opacity-70"
+              (isConverting || isProcessingImages || !isReady) && "opacity-70"
             )}
           >
-            {isConverting ? (
+            {isProcessingImages ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processando...
+              </>
+            ) : isConverting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 Convertendo...

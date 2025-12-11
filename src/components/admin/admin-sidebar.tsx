@@ -14,6 +14,7 @@ import {
   Shield,
   GraduationCap,
   History,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,6 +58,11 @@ const navItems = [
     title: "Users",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Faturamento",
+    href: "/admin/billing",
+    icon: DollarSign,
   },
   {
     title: "Settings",

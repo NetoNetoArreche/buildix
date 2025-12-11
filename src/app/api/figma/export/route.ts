@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
+// Configure body size limit for large HTML with base64 images
+export const maxDuration = 60;
+export const dynamic = "force-dynamic";
+
 const CODE_TO_DESIGN_API = "https://api.to.design/html";
 
 /**

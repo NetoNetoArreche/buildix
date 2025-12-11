@@ -5,8 +5,22 @@ import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// Custom adapter to map 'image' to 'avatar' field
+const customPrismaAdapter = {
+  ...PrismaAdapter(prisma),
+  createUser: async (data: any) => {
+    const { image, ...rest } = data;
+    return prisma.user.create({
+      data: {
+        ...rest,
+        avatar: image, // Map 'image' from OAuth to 'avatar' in our schema
+      },
+    });
+  },
+};
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: customPrismaAdapter as any,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
