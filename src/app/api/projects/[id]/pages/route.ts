@@ -37,23 +37,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { id: projectId } = await params;
 
-    // Check page limit for this project
-    const { allowed, currentPages, limit, plan, message } = await canCreatePage(
-      session.user.id,
-      projectId
-    );
+    // Admin bypass for limits
+    const ADMIN_EMAIL = "helioarreche@gmail.com";
+    const isAdmin = session.user.email === ADMIN_EMAIL;
 
-    if (!allowed) {
-      return NextResponse.json(
-        {
-          error: message,
-          usageLimit: true,
-          currentPages,
-          limit,
-          plan,
-        },
-        { status: 403 }
+    // Check page limit for this project (skip for admin)
+    if (!isAdmin) {
+      const { allowed, currentPages, limit, plan, message } = await canCreatePage(
+        session.user.id,
+        projectId
       );
+
+      if (!allowed) {
+        console.log(`[Pages API] User ${session.user.email} hit page limit: ${currentPages}/${limit} (${plan})`);
+        return NextResponse.json(
+          {
+            error: message,
+            usageLimit: true,
+            currentPages,
+            limit,
+            plan,
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();

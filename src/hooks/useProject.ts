@@ -21,6 +21,7 @@ interface UseProjectReturn {
   updateProject: (projectId: string, data: Partial<Project>) => Promise<Project | null>;
   deleteProject: (projectId: string) => Promise<boolean>;
   createPage: (projectId: string, name: string, slug?: string) => Promise<Page | null>;
+  deletePage: (projectId: string, pageId: string) => Promise<boolean>;
   savePage: (projectId: string, pageId: string, htmlContent: string, cssContent?: string, backgroundAssets?: BackgroundAsset[], canvasSettings?: CanvasSettings) => Promise<Page | null>;
   saveChat: (projectId: string, role: string, content: string, model?: string) => Promise<ChatMessageType | null>;
 }
@@ -185,6 +186,38 @@ export function useProject(): UseProjectReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // If page already exists, find it and navigate to it
+        if (errorData.error === "A page with this slug already exists") {
+          console.log("[useProject] Page already exists, navigating to it:", pageSlug);
+
+          // Find the existing page in the project
+          const existingPage = project?.pages.find(p => p.slug === pageSlug);
+          if (existingPage) {
+            console.log("[useProject] Found existing page:", existingPage.name, existingPage.id);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setCurrentPage(existingPage as any);
+            setHtmlContent(existingPage.htmlContent || "");
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return existingPage as any;
+          }
+        }
+
+        // If it's a usage limit error, throw with full context
+        if (errorData.usageLimit) {
+          console.log("[useProject] Page limit reached:", errorData);
+          const limitError = new Error(errorData.error || "Limite de páginas atingido");
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (limitError as any).usageLimit = true;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (limitError as any).currentPages = errorData.currentPages;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (limitError as any).limit = errorData.limit;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (limitError as any).plan = errorData.plan;
+          throw limitError;
+        }
+
         throw new Error(errorData.error || "Failed to create page");
       }
 
@@ -207,9 +240,40 @@ export function useProject(): UseProjectReturn {
       return newPage;
     } catch (err) {
       console.error("Error creating page:", err);
-      return null;
+      // Re-throw to let the caller handle it (e.g., show usage limit message)
+      throw err;
     }
-  }, [setCurrentPage, setHtmlContent]);
+  }, [setCurrentPage, setHtmlContent, project?.pages]);
+
+  const deletePage = useCallback(async (
+    projectId: string,
+    pageId: string
+  ): Promise<boolean> => {
+    try {
+      const response = await fetch(`/api/projects/${projectId}/pages/${pageId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete page");
+      }
+
+      // Update project state - remove the deleted page
+      setProject(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          pages: prev.pages.filter(p => p.id !== pageId),
+        };
+      });
+
+      return true;
+    } catch (err) {
+      console.error("Error deleting page:", err);
+      return false;
+    }
+  }, []);
 
   const savePage = useCallback(async (
     projectId: string,
@@ -281,6 +345,7 @@ export function useProject(): UseProjectReturn {
     updateProject,
     deleteProject,
     createPage,
+    deletePage,
     savePage,
     saveChat,
   };

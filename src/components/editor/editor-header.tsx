@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -34,6 +34,7 @@ import {
   Home,
   Plus,
   ArrowRightLeft,
+  Trash2,
 } from "lucide-react";
 import { toPng, toBlob } from "html-to-image";
 import JSZip from "jszip";
@@ -47,6 +48,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -68,19 +79,32 @@ interface EditorHeaderProps {
   pages?: PrismaPage[];
 }
 
-export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProps) {
+export function EditorHeader({ projectId, projectName, pages: initialPages }: EditorHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isUpdatingThumbnail, setIsUpdatingThumbnail] = useState(false);
   const [thumbnailUpdated, setThumbnailUpdated] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ pageId: string; pageName: string } | null>(null);
+  const [localPages, setLocalPages] = useState<PrismaPage[]>(initialPages || []);
   const { viewMode, setViewMode, deviceMode, setDeviceMode, zoom, setZoom, undo, redo, canUndo, canRedo, htmlContent, backgroundAssets, showLayersPanel, toggleLayersPanel, syncHtmlFromIframe, currentPage, setCurrentPage } =
     useEditorStore();
   const { openModal } = useUIStore();
   const { openPublishModal } = useCommunityStore();
-  const { updateProject } = useProject();
+  const { updateProject, deletePage } = useProject();
   const { isOpen: canvasModeOpen, toggleOpen: toggleCanvasMode } = useCanvasModeStore();
+  const [isDeletingPage, setIsDeletingPage] = useState<string | null>(null);
+
+  // Sync local pages when initialPages changes (e.g., on initial load)
+  useEffect(() => {
+    if (initialPages) {
+      setLocalPages(initialPages);
+    }
+  }, [initialPages]);
+
+  // Use local pages state for real-time updates
+  const pages = localPages;
 
   // Get HTML with background assets injected
   const getExportHtml = () => {
@@ -267,6 +291,41 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
     }
   };
 
+  // Handle page deletion - show confirmation modal
+  const handleDeletePageClick = (pageId: string, pageName: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent dropdown item click
+    setShowDeleteConfirm({ pageId, pageName });
+  };
+
+  // Confirm page deletion
+  const confirmDeletePage = async () => {
+    if (!showDeleteConfirm) return;
+
+    const { pageId } = showDeleteConfirm;
+    setIsDeletingPage(pageId);
+    setShowDeleteConfirm(null);
+
+    try {
+      const success = await deletePage(projectId, pageId);
+      if (success) {
+        // Update local pages state immediately for real-time UI update
+        setLocalPages(prev => prev.filter(p => p.id !== pageId));
+
+        // If we deleted the current page, switch to first available page
+        if (currentPage?.id === pageId && pages && pages.length > 1) {
+          const nextPage = pages.find(p => p.id !== pageId);
+          if (nextPage) {
+            setCurrentPage({ ...nextPage, order: 0, cssContent: nextPage.cssContent || undefined } as Page);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete page:", error);
+    } finally {
+      setIsDeletingPage(null);
+    }
+  };
+
   const viewModes: { mode: ViewMode; icon: React.ElementType; label: string }[] = [
     { mode: "preview", icon: Eye, label: "Preview" },
     { mode: "design", icon: MousePointer2, label: "Design" },
@@ -321,20 +380,41 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
               <ChevronDown className="h-3.5 w-3.5 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
+          <DropdownMenuContent align="start" className="min-w-[200px]">
             {pages?.map((page) => (
               <DropdownMenuItem
                 key={page.id}
                 onClick={() => setCurrentPage({ ...page, order: 0, cssContent: page.cssContent || undefined } as Page)}
                 className={cn(
+                  "flex items-center justify-between group",
                   currentPage?.id === page.id && "bg-accent"
                 )}
               >
-                {page.isHome && <Home className="h-3 w-3 mr-2" />}
-                {page.name}
-                {currentPage?.id === page.id && (
-                  <Check className="h-3 w-3 ml-auto" />
-                )}
+                <div className="flex items-center">
+                  {page.isHome && <Home className="h-3 w-3 mr-2" />}
+                  {page.name}
+                </div>
+                <div className="flex items-center gap-1">
+                  {currentPage?.id === page.id && (
+                    <Check className="h-3 w-3" />
+                  )}
+                  {/* Delete button - only show if not the last page */}
+                  {pages && pages.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 opacity-0 group-hover:opacity-100 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={(e) => handleDeletePageClick(page.id, page.name, e)}
+                      disabled={isDeletingPage === page.id}
+                    >
+                      {isDeletingPage === page.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </DropdownMenuItem>
             ))}
             {pages && pages.length > 0 && <DropdownMenuSeparator />}
@@ -678,6 +758,32 @@ export function EditorHeader({ projectId, projectName, pages }: EditorHeaderProp
           Publish
         </Button>
       </div>
+
+      {/* Delete Page Confirmation Dialog */}
+      <AlertDialog open={!!showDeleteConfirm} onOpenChange={(open) => !open && setShowDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Deletar Página
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja deletar a página <strong>&quot;{showDeleteConfirm?.pageName}&quot;</strong>?
+              <br />
+              <span className="text-destructive">Esta ação não pode ser desfeita.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePage}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Deletar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }

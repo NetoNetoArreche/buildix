@@ -606,14 +606,35 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
 
       console.log("[LeftPanel] Creating new page:", formattedPageName);
 
-      // Create the new page - this will also switch to it
-      const newPage = await createPage(projectId, formattedPageName);
+      try {
+        // Create the new page - this will also switch to it
+        const newPage = await createPage(projectId, formattedPageName);
 
-      if (newPage) {
-        console.log("[LeftPanel] New page created successfully:", newPage.id);
-        targetPageId = newPage.id;
-      } else {
-        console.error("[LeftPanel] Failed to create new page");
+        if (newPage) {
+          console.log("[LeftPanel] New page created successfully:", newPage.id);
+          targetPageId = newPage.id;
+        } else {
+          console.error("[LeftPanel] Failed to create new page");
+        }
+      } catch (pageError: unknown) {
+        // Check if it's a usage limit error
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err = pageError as any;
+        if (err.usageLimit) {
+          // Show error message to user
+          const errorMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: err.message || `Você atingiu o limite de ${err.limit} páginas por projeto do seu plano. Faça upgrade para criar mais páginas!`,
+            error: true,
+            createdAt: new Date(),
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+          clearStreaming();
+          return; // Stop execution - don't proceed with AI generation
+        }
+        // For other errors, log and continue (page might already exist)
+        console.error("[LeftPanel] Error creating page:", pageError);
       }
     }
 
