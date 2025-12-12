@@ -573,19 +573,19 @@ export default function CreatePage() {
                 onChange={handleImageUpload}
               />
 
-              {/* Figma Import Button */}
+              {/* Figma Import Button - Disabled (not implemented yet) */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setIsFigmaModalOpen(true)}
+                    className="h-8 w-8 opacity-40 cursor-not-allowed"
+                    disabled={true}
                   >
                     <Figma className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Importar do Figma</TooltipContent>
+                <TooltipContent>Figma Import (em breve)</TooltipContent>
               </Tooltip>
 
               <span className="hidden sm:inline text-xs text-muted-foreground">

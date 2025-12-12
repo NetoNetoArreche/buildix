@@ -7,11 +7,9 @@ import {
   Send,
   Wand2,
   Sparkles,
-  RotateCcw,
   Copy,
   Eye,
   Code,
-  ChevronDown,
   Bot,
   User,
   AlertCircle,
@@ -23,6 +21,7 @@ import {
   ImagePlus,
   X,
   Figma,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1082,62 +1081,40 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
               disabled={isGenerating}
             />
             <div className="flex items-center justify-between border-t p-2 gap-2">
-              <div className="flex items-center gap-1 min-w-0 flex-wrap">
-                {/* Content Type Selector */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-1 min-w-0 flex-nowrap overflow-hidden">
+                {/* Content Type Selector - Disabled (only landing page for now) */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 gap-0 text-xs group overflow-hidden"
-                      disabled={isGenerating}
+                      className="h-7 px-1.5 gap-0.5 opacity-40 cursor-not-allowed"
+                      disabled={true}
                     >
-                      {contentType === "landing" && <Layout className="h-3 w-3 shrink-0" />}
-                      {contentType === "instagram-post" && <Square className="h-3 w-3 shrink-0" />}
-                      {contentType === "instagram-carousel" && <Layers className="h-3 w-3 shrink-0" />}
-                      {contentType === "instagram-story" && <Smartphone className="h-3 w-3 shrink-0" />}
-                      <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-[60px] group-hover:ml-1">
-                        {contentType === "landing" ? "Landing" : contentType === "instagram-post" ? "Post" : contentType === "instagram-carousel" ? "Carousel" : "Story"}
-                      </span>
-                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5 shrink-0" />
+                      <Layout className="h-3 w-3" />
+                      <ChevronDown className="h-3 w-3 opacity-50" />
                     </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    {CONTENT_TYPE_OPTIONS.map((option) => (
-                      <DropdownMenuItem
-                        key={option.value}
-                        onClick={() => setContentType(option.value as ContentType)}
-                        className="flex flex-col items-start gap-0.5"
-                      >
-                        <div className="flex items-center gap-2">
-                          {option.value === "landing" && <Layout className="h-3.5 w-3.5" />}
-                          {option.value === "instagram-post" && <Square className="h-3.5 w-3.5" />}
-                          {option.value === "instagram-carousel" && <Layers className="h-3.5 w-3.5" />}
-                          {option.value === "instagram-story" && <Smartphone className="h-3.5 w-3.5" />}
-                          <span className="font-medium">{option.label}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground ml-5">{option.description}</span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
+                  </TooltipTrigger>
+                  <TooltipContent>Tipo de Conteúdo (em breve)</TooltipContent>
+                </Tooltip>
                 {/* AI Model Selector */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 gap-0 text-xs group overflow-hidden"
-                      disabled={isGenerating}
-                    >
-                      <Sparkles className="h-3 w-3 shrink-0" />
-                      <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-[60px] group-hover:ml-1">
-                        {selectedModel === "gemini" ? "Gemini" : "Claude"}
-                      </span>
-                      <ChevronDown className="h-3 w-3 opacity-50 ml-0.5 shrink-0" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-1.5 gap-0.5"
+                          disabled={isGenerating}
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{selectedModel === "gemini" ? "Gemini Pro" : "Claude Sonnet"}</TooltipContent>
+                  </Tooltip>
                   <DropdownMenuContent align="start">
                     <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
                       <Sparkles className="mr-2 h-3.5 w-3.5" />
@@ -1155,15 +1132,12 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-7 gap-0 text-xs group overflow-hidden"
+                      size="icon"
+                      className="h-7 w-7"
                       onClick={() => setShowPromptBuilder(true)}
                       disabled={isGenerating}
                     >
-                      <Wand2 className="h-3 w-3 shrink-0" />
-                      <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-[50px] group-hover:ml-1">
-                        Builder
-                      </span>
+                      <Wand2 className="h-3 w-3" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Prompt Builder</TooltipContent>
@@ -1208,20 +1182,19 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
                   onChange={handleImageUpload}
                 />
 
-                {/* Figma Import Button */}
+                {/* Figma Import Button - Disabled (not implemented yet) */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
-                      onClick={() => setIsFigmaModalOpen(true)}
-                      disabled={isGenerating}
+                      className="h-7 w-7 opacity-40 cursor-not-allowed"
+                      disabled={true}
                     >
                       <Figma className="h-3 w-3" />
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Importar do Figma</TooltipContent>
+                  <TooltipContent>Figma Import (em breve)</TooltipContent>
                 </Tooltip>
               </div>
 
