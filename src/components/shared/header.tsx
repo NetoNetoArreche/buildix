@@ -1,15 +1,19 @@
 "use client";
 
 import { Bell, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { LanguageSelector } from "./language-selector";
 
 interface HeaderProps {
   title?: string;
 }
 
 export function Header({ title }: HeaderProps) {
+  const t = useTranslations("header");
+
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
       {/* Left side - Title or Search */}
@@ -19,7 +23,7 @@ export function Header({ title }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search projects, templates..."
+            placeholder={t("searchPlaceholder")}
             className="w-[300px] pl-9"
           />
         </div>
@@ -27,6 +31,8 @@ export function Header({ title }: HeaderProps) {
 
       {/* Right side - Actions */}
       <div className="flex items-center gap-2">
+        <LanguageSelector />
+
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[hsl(var(--buildix-primary))]" />

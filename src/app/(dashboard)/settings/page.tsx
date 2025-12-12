@@ -2,11 +2,13 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { User, Settings, Palette, Loader2, Save } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { User, Settings, Palette, Loader2, Save, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LanguageSelector } from "@/components/shared/language-selector";
 import { cn } from "@/lib/utils";
 
 type Tab = "profile" | "preferences";
@@ -15,6 +17,8 @@ export default function SettingsPage() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [isSaving, setIsSaving] = useState(false);
+  const t = useTranslations("settings");
+  const tCommon = useTranslations("common");
 
   if (status === "loading") {
     return (
@@ -25,8 +29,8 @@ export default function SettingsPage() {
   }
 
   const tabs = [
-    { id: "profile" as Tab, label: "Profile", icon: User },
-    { id: "preferences" as Tab, label: "Preferences", icon: Palette },
+    { id: "profile" as Tab, label: t("profile"), icon: User },
+    { id: "preferences" as Tab, label: t("preferences"), icon: Palette },
   ];
 
   const initials = session?.user?.name
@@ -39,9 +43,9 @@ export default function SettingsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Settings</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-muted-foreground">
-          Manage your account and preferences
+          {t("subtitle")}
         </p>
       </div>
 
@@ -70,9 +74,9 @@ export default function SettingsPage() {
           {activeTab === "profile" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold">Profile</h2>
+                <h2 className="text-lg font-semibold">{t("profile")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Your personal information
+                  {t("profileDesc")}
                 </p>
               </div>
 
@@ -129,12 +133,12 @@ export default function SettingsPage() {
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {tCommon("loading")}
                   </>
                 ) : (
                   <>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Changes
+                    {tCommon("save")}
                   </>
                 )}
               </Button>
@@ -144,18 +148,18 @@ export default function SettingsPage() {
           {activeTab === "preferences" && (
             <div className="space-y-6">
               <div>
-                <h2 className="text-lg font-semibold">Preferences</h2>
+                <h2 className="text-lg font-semibold">{t("preferences")}</h2>
                 <p className="text-sm text-muted-foreground">
-                  Customize your experience
+                  {t("preferencesDesc")}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div>
-                    <p className="font-medium">Theme</p>
+                    <p className="font-medium">{t("theme")}</p>
                     <p className="text-sm text-muted-foreground">
-                      Choose your preferred theme
+                      {t("themeDesc")}
                     </p>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -164,13 +168,16 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div>
-                    <p className="font-medium">Language</p>
-                    <p className="text-sm text-muted-foreground">
-                      Interface language
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <Globe className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium">{t("language")}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {t("languageDesc")}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm font-medium">English</p>
+                  <LanguageSelector />
                 </div>
               </div>
             </div>

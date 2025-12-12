@@ -4,6 +4,7 @@ import { useState, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
@@ -13,6 +14,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/projects";
+  const t = useTranslations("auth");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +35,7 @@ function LoginForm() {
     setIsLoading(false);
 
     if (result?.error) {
-      setError("Invalid email or password");
+      setError(t("errors.invalidCredentials"));
     } else {
       router.push(callbackUrl);
       router.refresh();
@@ -48,37 +50,37 @@ function LoginForm() {
     <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg">
       <div className="flex flex-col items-center text-center">
         <CosmosLogo className="h-16 w-16 mb-4" />
-        <h1 className="text-2xl font-bold">Welcome to Buildix</h1>
+        <h1 className="text-2xl font-bold">{t("welcomeTo")}</h1>
         <p className="mt-2 text-muted-foreground">
-          Sign in to your account to continue
+          {t("signInToContinue")}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
-            Email
+            {t("email")}
           </label>
           <Input
             id="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+            placeholder={t("emailPlaceholder")}
             required
             autoComplete="email"
           />
         </div>
         <div className="space-y-2">
           <label htmlFor="password" className="text-sm font-medium">
-            Password
+            {t("password")}
           </label>
           <Input
             id="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
+            placeholder={t("passwordPlaceholder")}
             required
             autoComplete="current-password"
           />
@@ -90,7 +92,7 @@ function LoginForm() {
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Sign In
+          {t("signIn")}
         </Button>
       </form>
 
@@ -102,7 +104,7 @@ function LoginForm() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-card px-2 text-muted-foreground">
-                Or continue with
+                {t("orContinueWith")}
               </span>
             </div>
           </div>
@@ -130,15 +132,15 @@ function LoginForm() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            {t("continueWithGoogle")}
           </Button>
         </>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
+        {t("dontHaveAccount")}{" "}
         <Link href="/register" className="text-primary hover:underline">
-          Sign up
+          {t("signUp")}
         </Link>
       </p>
     </div>

@@ -209,6 +209,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
     const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
     if (!iframe?.contentDocument) {
       console.error("Cannot access iframe content");
+      setExportError("Nao foi possivel acessar o conteudo do iframe.");
       return;
     }
 
@@ -219,6 +220,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       const bodyChildren = iframe.contentDocument.body.children;
       if (bodyChildren.length === 0) {
         console.error("No slides found to export");
+        setExportError("Nenhum slide encontrado para exportar.");
         return;
       }
       // If no carousel-slide class, export single image instead
@@ -227,8 +229,11 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
     }
 
     setIsExporting(true);
+    setExportError(null);
+
     try {
       const zip = new JSZip();
+      let failedSlides = 0;
 
       for (let i = 0; i < slides.length; i++) {
         const slide = slides[i] as HTMLElement;
@@ -244,18 +249,42 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
           bgColor = slide.style.backgroundColor || "#000";
         }
 
-        const blob = await toBlob(slide, {
-          width: 1080,
-          height: 1350,
-          pixelRatio: 2,
-          backgroundColor: bgColor,
-          // Ensure all styles are captured including Tailwind classes
-          skipAutoScale: true,
-          cacheBust: true,
-        });
-        if (blob) {
-          zip.file(`slide-${String(i + 1).padStart(2, "0")}.png`, blob);
+        try {
+          const blob = await toBlob(slide, {
+            width: 1080,
+            height: 1350,
+            pixelRatio: 2,
+            backgroundColor: bgColor,
+            // Ensure all styles are captured including Tailwind classes
+            skipAutoScale: true,
+            cacheBust: true,
+            // Handle failed images gracefully
+            filter: (node) => {
+              // Skip broken images to prevent export failure
+              if (node instanceof HTMLImageElement && !node.complete) {
+                return false;
+              }
+              return true;
+            },
+          });
+          if (blob) {
+            zip.file(`slide-${String(i + 1).padStart(2, "0")}.png`, blob);
+          } else {
+            failedSlides++;
+            console.warn(`Slide ${i + 1} gerou blob vazio`);
+          }
+        } catch (slideError) {
+          failedSlides++;
+          console.warn(`Falha ao exportar slide ${i + 1}:`, slideError);
+          // Continue with other slides even if one fails
         }
+      }
+
+      // Check if any slides were exported
+      const exportedCount = slides.length - failedSlides;
+      if (exportedCount === 0) {
+        setExportError("Nenhum slide foi exportado. Verifique se as imagens carregaram corretamente.");
+        return;
       }
 
       // Generate and download ZIP
@@ -265,8 +294,14 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       link.href = URL.createObjectURL(zipBlob);
       link.click();
       URL.revokeObjectURL(link.href);
+
+      // Show warning if some slides failed
+      if (failedSlides > 0) {
+        setExportError(`Aviso: ${failedSlides} slide(s) nao foram exportados devido a imagens com erro.`);
+      }
     } catch (error) {
       console.error("Export carousel failed:", error);
+      setExportError("Erro ao exportar carousel. Verifique se todas as imagens carregaram.");
     } finally {
       setIsExporting(false);
     }

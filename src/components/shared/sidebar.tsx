@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   FolderOpen,
   Image,
@@ -31,27 +32,27 @@ import { useUIStore } from "@/stores/uiStore";
 
 const mainNavItems = [
   {
-    title: "Create",
+    titleKey: "create",
     href: "/",
     icon: Sparkles,
   },
   {
-    title: "Projects",
+    titleKey: "projects",
     href: "/projects",
     icon: FolderOpen,
   },
   {
-    title: "Community",
+    titleKey: "community",
     href: "/community",
     icon: Users,
   },
   {
-    title: "Components",
+    titleKey: "components",
     href: "/components",
     icon: Layers,
   },
   {
-    title: "Assets",
+    titleKey: "assets",
     href: "/assets",
     icon: Image,
   },
@@ -59,27 +60,27 @@ const mainNavItems = [
 
 const bottomNavItems = [
   {
-    title: "Learn",
+    titleKey: "learn",
     href: "/learn",
     icon: GraduationCap,
   },
   {
-    title: "Changelog",
+    titleKey: "changelog",
     href: "/changelog",
     icon: History,
   },
   {
-    title: "Pricing",
+    titleKey: "pricing",
     href: "/pricing",
     icon: CreditCard,
   },
   {
-    title: "Settings",
+    titleKey: "settings",
     href: "/settings",
     icon: Settings,
   },
   {
-    title: "Help",
+    titleKey: "help",
     href: "/help",
     icon: HelpCircle,
   },
@@ -88,6 +89,7 @@ const bottomNavItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const t = useTranslations("nav");
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -132,13 +134,13 @@ export function Sidebar() {
                   </Link>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">New Project</TooltipContent>
+              <TooltipContent side="right">{t("newProject")}</TooltipContent>
             </Tooltip>
           ) : (
             <Button variant="buildix" className="w-full justify-start" asChild>
               <Link href="/">
                 <Plus className="mr-2 h-4 w-4" />
-                New Project
+                {t("newProject")}
               </Link>
             </Button>
           )}
@@ -149,6 +151,7 @@ export function Sidebar() {
           {mainNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
+            const title = t(item.titleKey);
 
             if (sidebarCollapsed) {
               return (
@@ -166,7 +169,7 @@ export function Sidebar() {
                       <Icon className="h-5 w-5" />
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right">{item.title}</TooltipContent>
+                  <TooltipContent side="right">{title}</TooltipContent>
                 </Tooltip>
               );
             }
@@ -183,7 +186,7 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="h-5 w-5" />
-                {item.title}
+                {title}
               </Link>
             );
           })}
@@ -195,6 +198,7 @@ export function Sidebar() {
           {bottomNavItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
+            const title = t(item.titleKey);
 
             if (sidebarCollapsed) {
               return (
@@ -212,7 +216,7 @@ export function Sidebar() {
                       <Icon className="h-5 w-5" />
                     </Link>
                   </TooltipTrigger>
-                  <TooltipContent side="right">{item.title}</TooltipContent>
+                  <TooltipContent side="right">{title}</TooltipContent>
                 </Tooltip>
               );
             }
@@ -229,7 +233,7 @@ export function Sidebar() {
                 )}
               >
                 <Icon className="h-5 w-5" />
-                {item.title}
+                {title}
               </Link>
             );
           })}

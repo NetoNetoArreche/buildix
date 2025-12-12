@@ -1,0 +1,185 @@
+{
+  "common": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "create": "Criar",
+    "edit": "Editar",
+    "search": "Pesquisar",
+    "loading": "Carregando...",
+    "viewAll": "Ver todos",
+    "generate": "Gerar",
+    "close": "Fechar",
+    "back": "Voltar",
+    "next": "Proximo",
+    "submit": "Enviar",
+    "confirm": "Confirmar",
+    "reset": "Resetar",
+    "apply": "Aplicar",
+    "poweredByAI": "Desenvolvido com IA"
+  },
+  "nav": {
+    "newProject": "Novo Projeto",
+    "create": "Criar",
+    "projects": "Projetos",
+    "community": "Comunidade",
+    "components": "Componentes",
+    "assets": "Recursos",
+    "learn": "Aprender",
+    "changelog": "Novidades",
+    "pricing": "Precos",
+    "settings": "Configuracoes",
+    "help": "Ajuda"
+  },
+  "header": {
+    "searchPlaceholder": "Pesquisar projetos, templates..."
+  },
+  "auth": {
+    "welcomeTo": "Bem-vindo ao Buildix",
+    "signInToContinue": "Entre na sua conta para continuar",
+    "signIn": "Entrar",
+    "signUp": "Criar conta",
+    "signOut": "Sair",
+    "createAccount": "Criar Conta",
+    "createYourAccount": "Crie sua conta",
+    "startBuilding": "Comece a criar landing pages incriveis com IA",
+    "email": "Email",
+    "emailPlaceholder": "voce@exemplo.com",
+    "password": "Senha",
+    "passwordPlaceholder": "Digite sua senha",
+    "confirmPassword": "Confirmar Senha",
+    "confirmPasswordPlaceholder": "Confirme sua senha",
+    "createPasswordPlaceholder": "Crie uma senha (min. 6 caracteres)",
+    "name": "Nome",
+    "namePlaceholder": "Seu nome",
+    "orContinueWith": "Ou continue com",
+    "continueWithGoogle": "Continuar com Google",
+    "dontHaveAccount": "Nao tem uma conta?",
+    "alreadyHaveAccount": "Ja tem uma conta?",
+    "errors": {
+      "invalidCredentials": "Email ou senha invalidos",
+      "passwordsDoNotMatch": "As senhas nao coincidem",
+      "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+      "registrationFailed": "Falha no cadastro",
+      "loginFailedAfterRegister": "Conta criada mas o login falhou. Por favor, tente fazer login.",
+      "somethingWentWrong": "Algo deu errado. Por favor, tente novamente."
+    }
+  },
+  "dashboard": {
+    "aiPoweredBuilder": "Construtor com IA",
+    "buildLandingPages": "Crie landing pages com IA",
+    "describeYourVision": "Descreva sua visao e veja ela ganhar vida. Sem precisar programar.",
+    "describeLandingPage": "Descreva a landing page que voce quer criar... (digite @ para snippets)",
+    "pressToGenerate": "Pressione {key} + Enter para gerar",
+    "quickStart": "Inicio Rapido",
+    "recentProjects": "Projetos Recentes",
+    "noProjectsYet": "Nenhum projeto ainda",
+    "createFirstProject": "Crie seu primeiro projeto usando o formulario acima",
+    "referenceImage": "Imagem de Referencia",
+    "referenceImageAttached": "Imagem de referencia anexada",
+    "codeSnippets": "Snippets de Codigo (digite @)",
+    "figmaImport": "Importar do Figma (em breve)",
+    "promptBuilder": "Construtor de Prompt",
+    "quickPrompts": {
+      "landingPage": "Landing Page",
+      "landingPagePrompt": "Crie uma landing page moderna de SaaS com hero, recursos e secoes de precos",
+      "portfolio": "Portfolio",
+      "portfolioPrompt": "Crie uma pagina de portfolio minimalista para um designer com galeria de projetos",
+      "productPage": "Pagina de Produto",
+      "productPagePrompt": "Crie uma landing page de produto com imagem hero, beneficios e CTA"
+    },
+    "aiModels": {
+      "gemini": "Gemini",
+      "geminiDesc": "Modelo de IA do Google - Rapido e Criativo",
+      "claude": "Claude",
+      "claudeDesc": "Modelo de IA da Anthropic - Detalhado e Preciso"
+    },
+    "imageUpload": {
+      "invalidType": "Tipo de arquivo invalido. Use PNG, JPG ou WEBP.",
+      "tooLarge": "Imagem muito grande. Tamanho maximo: 5MB"
+    }
+  },
+  "settings": {
+    "title": "Configuracoes",
+    "subtitle": "Gerencie sua conta e preferencias",
+    "profile": "Perfil",
+    "profileDesc": "Suas informacoes pessoais",
+    "preferences": "Preferencias",
+    "preferencesDesc": "Personalize sua experiencia",
+    "language": "Idioma",
+    "languageDesc": "Escolha seu idioma preferido",
+    "theme": "Tema",
+    "themeDesc": "Escolha seu tema preferido"
+  },
+  "editor": {
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "preview": "Visualizar",
+    "export": "Exportar",
+    "download": "Baixar",
+    "share": "Compartilhar",
+    "zoomIn": "Aumentar Zoom",
+    "zoomOut": "Diminuir Zoom",
+    "devices": {
+      "monitor": "Monitor",
+      "tablet": "Tablet",
+      "smartphone": "Smartphone"
+    },
+    "modes": {
+      "preview": "Visualizar",
+      "select": "Selecionar",
+      "code": "Codigo"
+    }
+  },
+  "promptBuilder": {
+    "title": "Construtor de Prompt",
+    "generateWithAI": "Gerar com IA",
+    "selectOptionsToPreview": "Selecione opcoes para visualizar",
+    "yourConfiguration": "Sua Configuracao",
+    "replayAnimation": "Repetir Animacao",
+    "sections": {
+      "layoutType": "Tipo de Layout",
+      "layoutConfig": "Configuracao de Layout",
+      "framing": "Enquadramento",
+      "style": "Estilo",
+      "theme": "Tema",
+      "accentColor": "Cor de Destaque",
+      "typography": "Tipografia",
+      "typefaceType": "Tipo de Fonte",
+      "headingFont": "Fonte do Titulo",
+      "bodyFont": "Fonte do Corpo",
+      "fontSize": "Tamanho da Fonte",
+      "fontWeight": "Peso da Fonte",
+      "letterSpacing": "Espacamento de Letras",
+      "animationType": "Tipo de Animacao",
+      "animationScene": "Cena",
+      "animationDuration": "Duracao",
+      "animationDelay": "Atraso",
+      "animationTiming": "Tempo",
+      "animationIterations": "Repeticoes",
+      "animationDirection": "Direcao",
+      "generatedPrompts": "Prompts Pre-definidos"
+    },
+    "layoutTypes": {
+      "hero": "Hero",
+      "features": "Recursos",
+      "onboarding": "Onboarding",
+      "docs": "Documentacao",
+      "team": "Equipe",
+      "services": "Servicos",
+      "testimonials": "Depoimentos",
+      "contact": "Contato",
+      "pricing": "Precos"
+    },
+    "styles": {
+      "flat": "Plano",
+      "rounded": "Arredondado",
+      "glass": "Vidro",
+      "ios": "iOS"
+    },
+    "themes": {
+      "light": "Claro",
+      "dark": "Escuro"
+    }
+  }
+}

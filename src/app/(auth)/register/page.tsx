@@ -4,12 +4,14 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useTranslations("auth");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,12 +25,12 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("errors.passwordsDoNotMatch"));
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+      setError(t("errors.passwordTooShort"));
       return;
     }
 
@@ -45,7 +47,7 @@ export default function RegisterPage() {
       const data = await registerRes.json();
 
       if (!registerRes.ok) {
-        setError(data.error || "Registration failed");
+        setError(data.error || t("errors.registrationFailed"));
         setIsLoading(false);
         return;
       }
@@ -60,13 +62,13 @@ export default function RegisterPage() {
       setIsLoading(false);
 
       if (result?.error) {
-        setError("Account created but login failed. Please try logging in.");
+        setError(t("errors.loginFailedAfterRegister"));
       } else {
         router.push("/projects");
         router.refresh();
       }
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(t("errors.somethingWentWrong"));
       setIsLoading(false);
     }
   };
@@ -75,64 +77,64 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-6 rounded-lg border bg-card p-8 shadow-lg">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Create your account</h1>
+          <h1 className="text-2xl font-bold">{t("createYourAccount")}</h1>
           <p className="mt-2 text-muted-foreground">
-            Start building amazing landing pages with AI
+            {t("startBuilding")}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-medium">
-              Name
+              {t("name")}
             </label>
             <Input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Your name"
+              placeholder={t("namePlaceholder")}
               autoComplete="name"
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              {t("email")}
             </label>
             <Input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("emailPlaceholder")}
               required
               autoComplete="email"
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              {t("password")}
             </label>
             <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Create a password (min. 6 characters)"
+              placeholder={t("createPasswordPlaceholder")}
               required
               autoComplete="new-password"
             />
           </div>
           <div className="space-y-2">
             <label htmlFor="confirmPassword" className="text-sm font-medium">
-              Confirm Password
+              {t("confirmPassword")}
             </label>
             <Input
               id="confirmPassword"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm your password"
+              placeholder={t("confirmPasswordPlaceholder")}
               required
               autoComplete="new-password"
             />
@@ -144,14 +146,14 @@ export default function RegisterPage() {
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Create Account
+            {t("createAccount")}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground">
-          Already have an account?{" "}
+          {t("alreadyHaveAccount")}{" "}
           <Link href="/login" className="text-primary hover:underline">
-            Sign in
+            {t("signIn")}
           </Link>
         </p>
       </div>

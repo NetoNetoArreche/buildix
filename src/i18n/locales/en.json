@@ -1,0 +1,185 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "create": "Create",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading...",
+    "viewAll": "View all",
+    "generate": "Generate",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "reset": "Reset",
+    "apply": "Apply",
+    "poweredByAI": "Powered by AI"
+  },
+  "nav": {
+    "newProject": "New Project",
+    "create": "Create",
+    "projects": "Projects",
+    "community": "Community",
+    "components": "Components",
+    "assets": "Assets",
+    "learn": "Learn",
+    "changelog": "Changelog",
+    "pricing": "Pricing",
+    "settings": "Settings",
+    "help": "Help"
+  },
+  "header": {
+    "searchPlaceholder": "Search projects, templates..."
+  },
+  "auth": {
+    "welcomeTo": "Welcome to Buildix",
+    "signInToContinue": "Sign in to your account to continue",
+    "signIn": "Sign In",
+    "signUp": "Sign up",
+    "signOut": "Sign Out",
+    "createAccount": "Create Account",
+    "createYourAccount": "Create your account",
+    "startBuilding": "Start building amazing landing pages with AI",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "createPasswordPlaceholder": "Create a password (min. 6 characters)",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "orContinueWith": "Or continue with",
+    "continueWithGoogle": "Continue with Google",
+    "dontHaveAccount": "Don't have an account?",
+    "alreadyHaveAccount": "Already have an account?",
+    "errors": {
+      "invalidCredentials": "Invalid email or password",
+      "passwordsDoNotMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 6 characters",
+      "registrationFailed": "Registration failed",
+      "loginFailedAfterRegister": "Account created but login failed. Please try logging in.",
+      "somethingWentWrong": "Something went wrong. Please try again."
+    }
+  },
+  "dashboard": {
+    "aiPoweredBuilder": "AI-Powered Builder",
+    "buildLandingPages": "Build landing pages with AI",
+    "describeYourVision": "Describe your vision and watch it come to life. No coding required.",
+    "describeLandingPage": "Describe the landing page you want to create... (type @ for snippets)",
+    "pressToGenerate": "Press {key} + Enter to generate",
+    "quickStart": "Quick Start",
+    "recentProjects": "Recent Projects",
+    "noProjectsYet": "No projects yet",
+    "createFirstProject": "Create your first project using the form above",
+    "referenceImage": "Reference Image",
+    "referenceImageAttached": "Reference image attached",
+    "codeSnippets": "Code Snippets (type @)",
+    "figmaImport": "Figma Import (coming soon)",
+    "promptBuilder": "Prompt Builder",
+    "quickPrompts": {
+      "landingPage": "Landing Page",
+      "landingPagePrompt": "Create a modern SaaS landing page with hero, features, and pricing sections",
+      "portfolio": "Portfolio",
+      "portfolioPrompt": "Create a minimalist portfolio page for a designer with project gallery",
+      "productPage": "Product Page",
+      "productPagePrompt": "Create a product landing page with hero image, benefits, and CTA"
+    },
+    "aiModels": {
+      "gemini": "Gemini",
+      "geminiDesc": "Google's AI model - Fast & Creative",
+      "claude": "Claude",
+      "claudeDesc": "Anthropic's AI model - Detailed & Accurate"
+    },
+    "imageUpload": {
+      "invalidType": "Invalid file type. Use PNG, JPG or WEBP.",
+      "tooLarge": "Image too large. Maximum size: 5MB"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your account and preferences",
+    "profile": "Profile",
+    "profileDesc": "Your personal information",
+    "preferences": "Preferences",
+    "preferencesDesc": "Customize your experience",
+    "language": "Language",
+    "languageDesc": "Choose your preferred language",
+    "theme": "Theme",
+    "themeDesc": "Choose your preferred theme"
+  },
+  "editor": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "preview": "Preview",
+    "export": "Export",
+    "download": "Download",
+    "share": "Share",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "devices": {
+      "monitor": "Monitor",
+      "tablet": "Tablet",
+      "smartphone": "Smartphone"
+    },
+    "modes": {
+      "preview": "Preview",
+      "select": "Select",
+      "code": "Code"
+    }
+  },
+  "promptBuilder": {
+    "title": "Prompt Builder",
+    "generateWithAI": "Generate with AI",
+    "selectOptionsToPreview": "Select options to preview",
+    "yourConfiguration": "Your Configuration",
+    "replayAnimation": "Replay Animation",
+    "sections": {
+      "layoutType": "Layout Type",
+      "layoutConfig": "Layout Configuration",
+      "framing": "Framing",
+      "style": "Style",
+      "theme": "Theme",
+      "accentColor": "Accent Color",
+      "typography": "Typography",
+      "typefaceType": "Typeface Type",
+      "headingFont": "Heading Font",
+      "bodyFont": "Body Font",
+      "fontSize": "Font Size",
+      "fontWeight": "Font Weight",
+      "letterSpacing": "Letter Spacing",
+      "animationType": "Animation Type",
+      "animationScene": "Scene",
+      "animationDuration": "Duration",
+      "animationDelay": "Delay",
+      "animationTiming": "Timing",
+      "animationIterations": "Iterations",
+      "animationDirection": "Direction",
+      "generatedPrompts": "Pre-defined Prompts"
+    },
+    "layoutTypes": {
+      "hero": "Hero",
+      "features": "Features",
+      "onboarding": "Onboarding",
+      "docs": "Docs",
+      "team": "Team",
+      "services": "Services",
+      "testimonials": "Testimonials",
+      "contact": "Contact",
+      "pricing": "Pricing"
+    },
+    "styles": {
+      "flat": "Flat",
+      "rounded": "Rounded",
+      "glass": "Glass",
+      "ios": "iOS"
+    },
+    "themes": {
+      "light": "Light",
+      "dark": "Dark"
+    }
+  }
+}

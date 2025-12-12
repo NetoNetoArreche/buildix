@@ -387,13 +387,13 @@ export default function CreatePage() {
       <div className="text-center">
         <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[hsl(var(--buildix-primary))]/10 px-4 py-1.5 text-sm text-[hsl(var(--buildix-primary))]">
           <Sparkles className="h-4 w-4" />
-          Powered by AI
+          AI-Powered Builder
         </div>
         <h1 className="mb-4 text-4xl font-bold tracking-tight">
-          Create beautiful designs
+          Build landing pages with AI
         </h1>
         <p className="text-lg text-muted-foreground">
-          Generate a landing page in seconds. Just describe what you want.
+          Describe your vision and watch it come to life. No coding required.
         </p>
       </div>
 

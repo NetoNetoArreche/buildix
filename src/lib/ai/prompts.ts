@@ -568,21 +568,116 @@ export const PROMPT_BUILDER_OPTIONS = {
   ],
 
   typefaceTypes: [
-    { value: "sans", label: "Sans" },
-    { value: "serif", label: "Serif" },
-    { value: "mono", label: "Monospace" },
-    { value: "display", label: "Display" },
+    { value: "sans", label: "Sans", preview: "Type" },
+    { value: "serif", label: "Serif", preview: "Type" },
+    { value: "mono", label: "Monospace", preview: "Type" },
+    { value: "condensed", label: "Condensed", preview: "Type" },
+    { value: "expanded", label: "Expanded", preview: "Type" },
+    { value: "rounded", label: "Rounded", preview: "Type" },
   ],
 
   headingFonts: [
-    { value: "inter", label: "Inter" },
-    { value: "geist", label: "Geist" },
-    { value: "manrope", label: "Manrope" },
-    { value: "plus-jakarta", label: "Plus Jakarta Sans" },
-    { value: "space-grotesk", label: "Space Grotesk" },
-    { value: "cal-sans", label: "Cal Sans" },
+    { value: "inter", label: "Inter", preview: "Title" },
+    { value: "geist", label: "Geist", preview: "Title" },
+    { value: "manrope", label: "Manrope", preview: "Title" },
+    { value: "playfair", label: "Playfair Display", preview: "Title" },
+    { value: "instrument-serif", label: "Instrument Serif", preview: "Title" },
+    { value: "plex-serif", label: "Plex Serif", preview: "Title" },
   ],
 
+  bodyFonts: [
+    { value: "inter", label: "Inter", preview: "Body" },
+    { value: "geist", label: "Geist", preview: "Body" },
+    { value: "manrope", label: "Manrope", preview: "Body" },
+    { value: "playfair", label: "Playfair Display", preview: "Body" },
+    { value: "instrument-serif", label: "Instrument Serif", preview: "Body" },
+    { value: "plex-serif", label: "Plex Serif", preview: "Body" },
+  ],
+
+  headingSizes: [
+    { value: "sm", label: "20-32px", preview: "Title" },
+    { value: "md", label: "32-40px", preview: "Title" },
+    { value: "lg", label: "48-64px", preview: "Title" },
+    { value: "xl", label: "64-80px", preview: "Title" },
+  ],
+
+  subheadingSizes: [
+    { value: "sm", label: "16-20px", preview: "Subtitle" },
+    { value: "md", label: "20-24px", preview: "Subtitle" },
+    { value: "lg", label: "24-28px", preview: "Subtitle" },
+    { value: "xl", label: "28-32px", preview: "Subtitle" },
+  ],
+
+  bodyTextSizes: [
+    { value: "sm", label: "12-14px", preview: "Body" },
+    { value: "md", label: "14-16px", preview: "Body" },
+    { value: "lg", label: "16-18px", preview: "Body" },
+    { value: "xl", label: "18-20px", preview: "Body" },
+  ],
+
+  headingWeights: [
+    { value: "ultralight", label: "Ultralight", weight: 100 },
+    { value: "light", label: "Light", weight: 300 },
+    { value: "regular", label: "Regular", weight: 400 },
+    { value: "medium", label: "Medium", weight: 500 },
+    { value: "semibold", label: "Semibold", weight: 600 },
+    { value: "bold", label: "Bold", weight: 700 },
+  ],
+
+  letterSpacings: [
+    { value: "tighter", label: "Tighter", tracking: "-0.05em" },
+    { value: "tight", label: "Tight", tracking: "-0.025em" },
+    { value: "normal", label: "Normal", tracking: "0" },
+    { value: "wide", label: "Wide", tracking: "0.025em" },
+    { value: "wider", label: "Wider", tracking: "0.05em" },
+    { value: "widest", label: "Widest", tracking: "0.1em" },
+  ],
+
+  // Animation Type
+  animationTypes: [
+    { value: "fade", label: "Fade", icon: "square" },
+    { value: "slide", label: "Slide", icon: "square" },
+    { value: "scale", label: "Scale", icon: "square" },
+    { value: "rotate", label: "Rotate", icon: "diamond" },
+    { value: "blur", label: "Blur", icon: "square" },
+    { value: "3d", label: "3D", icon: "square" },
+  ],
+
+  // Animation Scene (how elements animate)
+  animationScenes: [
+    { value: "all-at-once", label: "All at once", icon: "grid" },
+    { value: "sequence", label: "Sequence", icon: "layers" },
+    { value: "word-by-word", label: "Word by word", icon: "type" },
+    { value: "letter-by-letter", label: "Letter by letter", icon: "type" },
+  ],
+
+  // Animation Timing Functions
+  animationTimings: [
+    { value: "linear", label: "Linear", curve: "linear" },
+    { value: "ease", label: "Ease", curve: "ease" },
+    { value: "ease-in", label: "Ease In", curve: "ease-in" },
+    { value: "ease-out", label: "Ease Out", curve: "ease-out" },
+    { value: "ease-in-out", label: "Ease In Out", curve: "ease-in-out" },
+    { value: "spring", label: "Spring", curve: "cubic-bezier(0.68, -0.55, 0.265, 1.55)" },
+  ],
+
+  // Animation Iterations
+  animationIterations: [
+    { value: "1", label: "Once", display: "1×" },
+    { value: "2", label: "Twice", display: "2×" },
+    { value: "3", label: "Thrice", display: "3×" },
+    { value: "infinite", label: "Infinite", display: "∞" },
+  ],
+
+  // Animation Direction
+  animationDirections: [
+    { value: "normal", label: "Normal", icon: "arrow-right" },
+    { value: "reverse", label: "Reverse", icon: "arrow-left" },
+    { value: "alternate", label: "Alternate", icon: "arrow-right-left" },
+    { value: "alternate-reverse", label: "Alternate Rev...", icon: "arrow-left-right" },
+  ],
+
+  // Keep old animations for backward compatibility
   animations: [
     { value: "none", label: "None", description: "No animation" },
     { value: "fade", label: "Fade", description: "Fade in/out effects" },
@@ -594,99 +689,205 @@ export const PROMPT_BUILDER_OPTIONS = {
   ],
 
   generatedPrompts: [
-    { id: "saas-hero", label: "SaaS Hero Section", prompt: "Create a modern SaaS landing page hero with gradient text, floating UI elements, and a prominent CTA button" },
-    { id: "feature-grid", label: "Feature Grid with Icons", prompt: "Design a 3-column feature grid with icon cards, hover effects, and descriptive text" },
-    { id: "pricing-table", label: "Pricing Comparison Table", prompt: "Build a pricing table with 3 tiers, popular badge, feature comparison, and toggle for monthly/yearly" },
-    { id: "testimonial-carousel", label: "Testimonial Carousel", prompt: "Create a testimonial section with user avatars, quotes, company logos, and smooth transitions" },
-    { id: "cta-section", label: "Call-to-Action Section", prompt: "Design an eye-catching CTA section with gradient background, compelling headline, and dual buttons" },
-    { id: "footer-complex", label: "Complex Footer", prompt: "Build a comprehensive footer with multiple columns, newsletter signup, social links, and legal links" },
-    { id: "stats-counter", label: "Animated Stats Counter", prompt: "Create a statistics section with animated counting numbers, icons, and subtle animations" },
-    { id: "faq-accordion", label: "FAQ Accordion", prompt: "Design an FAQ section with expandable accordion items, smooth animations, and search functionality" },
-    { id: "team-grid", label: "Team Members Grid", prompt: "Build a team section with profile cards, social links, and hover effects" },
-    { id: "integration-logos", label: "Integration Logos Grid", prompt: "Create an integrations section with partner/tool logos in a responsive grid with hover effects" },
-    { id: "blog-cards", label: "Blog Post Cards", prompt: "Design blog post cards with featured images, categories, read time, and author info" },
-    { id: "newsletter-signup", label: "Newsletter Signup", prompt: "Create an elegant newsletter signup section with email input, privacy notice, and confirmation feedback" },
+    // Custom & Content
+    { id: "add-custom", label: "Add custom prompt", prompt: "" },
+    { id: "change-content", label: "Change texts, names, numbers", prompt: "Replace all placeholder texts, names, and numbers with unique, contextually relevant content. Make it feel authentic and professional." },
+    { id: "recreate-section", label: "Recreate this section with new content", prompt: "Recreate this design. Change all texts, names, and numbers. Put all the script and code related to each card/section to their respective container. They need to exist on their own, include the necessary script imports." },
+
+    // Layout & Structure
+    { id: "hero-section", label: "Create hero with all sections", prompt: "Create a hero section with compelling headline. Add sections for features, testimonials, pricing comparison, and a comprehensive footer with links." },
+    { id: "adapt-section", label: "Adapt a new section with fresh content", prompt: "Adapt a new section to the existing design language. Change all texts, names, and numbers to be unique and contextually appropriate." },
+    { id: "saas-hero", label: "SaaS Hero Section", prompt: "Create a modern SaaS landing page hero with gradient text, floating UI elements, compelling headline, and prominent CTA buttons. Include a main action button and a secondary outline button." },
+    { id: "feature-grid", label: "Feature Grid with Icons", prompt: "Design a 3-column feature grid with icon cards, hover effects, and descriptive text. Each card should have an icon, title, and description with subtle hover animations." },
+    { id: "pricing-table", label: "Pricing Comparison Table", prompt: "Build a pricing table with 3 tiers (Basic, Pro, Enterprise), popular badge on the middle tier, feature comparison list, and toggle for monthly/yearly billing with discount indicator." },
+    { id: "testimonial-carousel", label: "Testimonial Carousel", prompt: "Create a testimonial section with user avatars, quoted reviews, company logos, star ratings, and smooth carousel transitions. Include navigation dots and auto-play." },
+    { id: "cta-section", label: "Call-to-Action Section", prompt: "Design an eye-catching CTA section with gradient background, compelling headline, supporting text, and dual buttons (primary action + secondary link)." },
+    { id: "footer-complex", label: "Complex Footer", prompt: "Build a comprehensive footer with multiple columns for navigation, newsletter signup form, social media links, legal links, and copyright. Include company logo and tagline." },
+    { id: "stats-counter", label: "Animated Stats Counter", prompt: "Create a statistics section with animated counting numbers (e.g., 10K+ Users, 99.9% Uptime, 50+ Countries), icons, and subtle count-up animations on scroll." },
+    { id: "faq-accordion", label: "FAQ Accordion", prompt: "Design an FAQ section with expandable accordion items, smooth open/close animations, plus/minus icons, and organized by categories." },
+
+    // Icons & Visual Elements
+    { id: "iconify-solar", label: "Use Iconify Solar Linear icons", prompt: "Use Iconify Solar Linear icon set for all icons throughout the design. Import via <script src=\"https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js\"></script> and use <iconify-icon icon=\"solar:icon-name-linear\"></iconify-icon>" },
+    { id: "iconify-simple", label: "Use Simple Icons for company logos", prompt: "Use Iconify Simple Icons for company/brand logos at 96x36 size instead of text logos. Use <iconify-icon icon=\"simple-icons:brand-name\"></iconify-icon> component instead of full SVG code for cleaner markup." },
+    { id: "numbered-steps", label: "Add 01 02 03 number details", prompt: "Add numbered indicators (01, 02, 03, etc.) to sections, steps, or cards for visual hierarchy. Style them with a subtle color and larger font size as decorative elements." },
+    { id: "gradient-borders", label: "Use gradient borders for buttons and cards", prompt: "Apply gradient borders to buttons, cards, and interactive elements using border-image or pseudo-element technique for a premium, modern look." },
+    { id: "container-lines", label: "Add vertical container-size lines", prompt: "Add subtle vertical divider lines between container sections using border or pseudo-elements. These lines should span the container height for visual separation." },
+
+    // Animation & Motion
+    { id: "clip-intro", label: "Add clip intro animation", prompt: "Add a clip-path reveal animation on page load. Make sure the animation starts immediately and use animation-fill-mode: both instead of forwards. Don't start elements with opacity 0 to avoid flash of invisible content." },
+    { id: "scroll-animations", label: "Animate element by element on scroll", prompt: "Animate elements when they enter viewport using Intersection Observer. Apply fade in, slide in, blur in effects element by element. Use animation-fill-mode: 'both' instead of 'forwards'. Don't use opacity 0 as starting state." },
+    { id: "view-observed", label: "Animate when in view observed", prompt: "Implement scroll-triggered animations using Intersection Observer. When elements come into view, apply fade in, slide in, blur in effects sequentially, element by element with staggered delays." },
+    { id: "hover-beam", label: "Add border beam animation on hover", prompt: "Add a 1px animated border beam that travels around pill-shaped buttons on hover. The beam should smoothly trace the button's border creating a glowing trail effect." },
+    { id: "text-clip-animation", label: "Add vertical text clip slide animation", prompt: "Create a vertical text clip slide down animation that reveals text letter by letter. Use clip-path to mask and reveal each character with a smooth sliding motion." },
+    { id: "card-carousel", label: "Animate cards in rotating carousel", prompt: "Animate the cards to rotate between 3 cards in a continuous loop. Add prev/next arrow buttons to manually switch between cards. Include smooth transition effects and indicator dots." },
+    { id: "sonar-pulse", label: "Add sonar animation and decorations", prompt: "Add sonar-style pulsing ring animations to decorative elements, notification indicators, and call-to-action elements. Create expanding circles that fade out." },
+    { id: "flashlight-hover", label: "Add flashlight effect on hover", prompt: "Add a subtle flashlight/spotlight effect that follows the cursor position on hover. Apply to both the background and border of cards creating a glowing area under the mouse." },
+    { id: "marquee-infinite", label: "Apply infinite marquee animation", prompt: "Make the cards/logos animate in a marquee style, looping infinitely with duplicated items. Apply alpha mask (gradient fade) on left and right edges. Animation should be slow and smooth." },
+    { id: "parallax-bg", label: "Add parallax scrolling to background", prompt: "Add parallax scrolling effect to background elements. Background should move at a different speed than foreground content for depth and visual interest." },
+    { id: "noodle-connections", label: "Add connecting lines with beam animation", prompt: "Add animated curved lines (noodles/bezier curves) that connect related elements. Include a flowing beam/light effect that travels along the lines." },
+
+    // Layout Enhancements
+    { id: "iphone-frames", label: "Create iPhone device frames", prompt: "Create 3 iPhone frames (393x852), centered vertically and horizontally with gap of 40px. Adapt each section for mobile screens. Apply beautiful shadow: shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)] against a contrasting background." },
+    { id: "alpha-mask-edges", label: "Apply alpha masking for edge fade", prompt: "Apply alpha masking using mask-image: linear-gradient for left and right sides. Content should smoothly fade out at the edges creating an elegant overflow effect." },
+    { id: "responsive-adapt", label: "Make responsive", prompt: "Ensure all sections are fully responsive with appropriate breakpoints for mobile (< 640px), tablet (640px - 1024px), and desktop (> 1024px). Stack elements vertically on mobile, adjust font sizes and spacing." },
+    { id: "dark-mode-adapt", label: "Adapt to dark mode", prompt: "Adapt the design for dark mode with appropriate color adjustments. Invert backgrounds to dark, adjust text colors for contrast, modify shadows and borders to work on dark backgrounds." },
+
+    // Typography & Content
+    { id: "scale-typography", label: "Make headings and text bigger", prompt: "Make the headings 2 sizes bigger (e.g., text-2xl to text-4xl). Make the body text 1 size bigger. Increase line-height proportionally for better readability." },
+    { id: "modular-sections", label: "Make sections standalone modules", prompt: "Structure each section as an independent module with its own styles and scripts. Each card/section should have all related code in its container. They need to work on their own - include necessary script imports." },
+
+    // Advanced Effects
+    { id: "magnetic-buttons", label: "Magnetic Hover Buttons", prompt: "Add magnetic attraction effect to buttons that subtly follow cursor movement when hovering nearby. Button should slightly move toward the cursor position." },
+    { id: "blur-backdrop", label: "Frosted Glass Backdrop", prompt: "Apply backdrop-blur and semi-transparent backgrounds (bg-white/10 or bg-black/20) for a frosted glass effect on overlays, modals, and floating elements." },
+    { id: "gradient-mesh", label: "Mesh Gradient Background", prompt: "Create a colorful mesh gradient background with multiple color stops using radial-gradient layers. Colors should blend smoothly creating an organic, modern feel." },
+    { id: "noise-texture", label: "Subtle Noise Texture", prompt: "Add a subtle grain/noise texture overlay using CSS filter or SVG noise pattern for a more organic, premium feel. Keep opacity very low (5-10%)." },
+    { id: "glow-effects", label: "Ambient Glow Effects", prompt: "Add soft ambient glow effects behind key elements using large box-shadows with accent colors, or pseudo-elements with blur filter for a dreamy, premium appearance." },
   ],
 };
 
 // Helper to build prompt from builder options
 export function buildPromptFromOptions(options: {
-  layoutType: string;
-  layoutConfig: string;
-  framing?: string;
-  style: string;
-  theme: string;
-  accentColor: string;
-  backgroundColor?: string;
-  borderColor?: string;
-  shadow?: string;
-  typefaceType?: string;
-  headingFont?: string;
-  animation?: string;
+  layoutType: string | null;
+  layoutConfig: string | null;
+  framing?: string | null;
+  style: string | null;
+  theme: string | null;
+  accentColor: string | null;
+  backgroundColor?: string | null;
+  borderColor?: string | null;
+  shadow?: string | null;
+  typefaceType?: string | null;
+  headingFont?: string | null;
+  bodyFont?: string | null;
+  headingSize?: string | null;
+  headingWeight?: string | null;
+  letterSpacing?: string | null;
+  animation?: string | null;
   additionalInstructions?: string;
 }): string {
   const parts: string[] = [];
 
-  const layoutType = PROMPT_BUILDER_OPTIONS.layoutTypes.find(
-    (t) => t.value === options.layoutType
-  );
-  if (layoutType) {
-    parts.push(`Create a ${layoutType.label.toLowerCase()} layout`);
+  if (options.layoutType) {
+    const layoutType = PROMPT_BUILDER_OPTIONS.layoutTypes.find(
+      (t) => t.value === options.layoutType
+    );
+    if (layoutType) {
+      parts.push(`Create a ${layoutType.label.toLowerCase()} layout`);
+    }
   }
 
-  const layoutConfig = PROMPT_BUILDER_OPTIONS.layoutConfigs.find(
-    (c) => c.value === options.layoutConfig
-  );
-  if (layoutConfig) {
-    parts.push(`with ${layoutConfig.label.toLowerCase()} configuration`);
+  if (options.layoutConfig) {
+    const layoutConfig = PROMPT_BUILDER_OPTIONS.layoutConfigs.find(
+      (c) => c.value === options.layoutConfig
+    );
+    if (layoutConfig) {
+      parts.push(`with ${layoutConfig.label.toLowerCase()} configuration`);
+    }
   }
 
-  const framing = PROMPT_BUILDER_OPTIONS.framing.find((f) => f.value === options.framing);
-  if (framing && options.framing !== "full-screen") {
-    parts.push(`using ${framing.label.toLowerCase()} framing`);
+  if (options.framing && options.framing !== "full-screen") {
+    const framing = PROMPT_BUILDER_OPTIONS.framing.find((f) => f.value === options.framing);
+    if (framing) {
+      parts.push(`using ${framing.label.toLowerCase()} framing`);
+    }
   }
 
-  const style = PROMPT_BUILDER_OPTIONS.styles.find((s) => s.value === options.style);
-  if (style) {
-    parts.push(`in ${style.label.toLowerCase()} visual style`);
+  if (options.style) {
+    const style = PROMPT_BUILDER_OPTIONS.styles.find((s) => s.value === options.style);
+    if (style) {
+      parts.push(`in ${style.label.toLowerCase()} visual style`);
+    }
   }
 
-  const theme = PROMPT_BUILDER_OPTIONS.themes.find((t) => t.value === options.theme);
-  if (theme) {
-    parts.push(`with ${theme.value} theme`);
+  if (options.theme) {
+    const theme = PROMPT_BUILDER_OPTIONS.themes.find((t) => t.value === options.theme);
+    if (theme) {
+      parts.push(`with ${theme.value} theme`);
+    }
   }
 
-  const accentColor = PROMPT_BUILDER_OPTIONS.accentColors.find(
-    (c) => c.value === options.accentColor
-  );
-  if (accentColor) {
-    parts.push(`${accentColor.label.toLowerCase()} accent color`);
+  if (options.accentColor) {
+    const accentColor = PROMPT_BUILDER_OPTIONS.accentColors.find(
+      (c) => c.value === options.accentColor
+    );
+    if (accentColor) {
+      parts.push(`${accentColor.label.toLowerCase()} accent color`);
+    }
   }
 
-  const backgroundColor = PROMPT_BUILDER_OPTIONS.backgroundColors.find(
-    (c) => c.value === options.backgroundColor
-  );
-  if (backgroundColor) {
-    parts.push(`${backgroundColor.label.toLowerCase()} background`);
+  if (options.backgroundColor) {
+    const backgroundColor = PROMPT_BUILDER_OPTIONS.backgroundColors.find(
+      (c) => c.value === options.backgroundColor
+    );
+    if (backgroundColor) {
+      parts.push(`${backgroundColor.label.toLowerCase()} background`);
+    }
   }
 
-  const shadow = PROMPT_BUILDER_OPTIONS.shadows.find((s) => s.value === options.shadow);
-  if (shadow && options.shadow !== "none") {
-    parts.push(`${shadow.label.toLowerCase()} shadows`);
+  if (options.shadow && options.shadow !== "none") {
+    const shadow = PROMPT_BUILDER_OPTIONS.shadows.find((s) => s.value === options.shadow);
+    if (shadow) {
+      parts.push(`${shadow.label.toLowerCase()} shadows`);
+    }
   }
 
-  const headingFont = PROMPT_BUILDER_OPTIONS.headingFonts.find(
-    (f) => f.value === options.headingFont
-  );
-  if (headingFont) {
-    parts.push(`${headingFont.label} font for headings`);
+  if (options.headingFont) {
+    const headingFont = PROMPT_BUILDER_OPTIONS.headingFonts.find(
+      (f) => f.value === options.headingFont
+    );
+    if (headingFont) {
+      parts.push(`${headingFont.label} font for headings`);
+    }
   }
 
-  const animation = PROMPT_BUILDER_OPTIONS.animations.find(
-    (a) => a.value === options.animation
-  );
-  if (animation && options.animation !== "none") {
-    parts.push(`${animation.label.toLowerCase()} animations`);
+  if (options.bodyFont) {
+    const bodyFont = PROMPT_BUILDER_OPTIONS.bodyFonts.find(
+      (f) => f.value === options.bodyFont
+    );
+    if (bodyFont) {
+      parts.push(`${bodyFont.label} font for body text`);
+    }
+  }
+
+  if (options.headingSize) {
+    const headingSize = PROMPT_BUILDER_OPTIONS.headingSizes.find(
+      (s) => s.value === options.headingSize
+    );
+    if (headingSize) {
+      parts.push(`${headingSize.label} heading size`);
+    }
+  }
+
+  if (options.headingWeight) {
+    const headingWeight = PROMPT_BUILDER_OPTIONS.headingWeights.find(
+      (w) => w.value === options.headingWeight
+    );
+    if (headingWeight) {
+      parts.push(`${headingWeight.label.toLowerCase()} weight headings`);
+    }
+  }
+
+  if (options.letterSpacing && options.letterSpacing !== "normal") {
+    const letterSpacing = PROMPT_BUILDER_OPTIONS.letterSpacings.find(
+      (l) => l.value === options.letterSpacing
+    );
+    if (letterSpacing) {
+      parts.push(`${letterSpacing.label.toLowerCase()} letter spacing`);
+    }
+  }
+
+  if (options.animation && options.animation !== "none") {
+    const animation = PROMPT_BUILDER_OPTIONS.animations.find(
+      (a) => a.value === options.animation
+    );
+    if (animation) {
+      parts.push(`${animation.label.toLowerCase()} animations`);
+    }
+  }
+
+  // If no options selected, return a default prompt
+  if (parts.length === 0) {
+    return options.additionalInstructions || "Create a modern landing page.";
   }
 
   let prompt = parts.join(", ") + ".";
