@@ -36,6 +36,7 @@ export function CanvasFrame({
   // Inject selection styles and event handlers into iframe
   const injectSelectionBehavior = useCallback(() => {
     const iframe = iframeRef.current;
+    console.log("[CanvasFrame] injectSelectionBehavior called, iframe:", !!iframe, "doc:", !!iframe?.contentDocument, "body:", !!iframe?.contentDocument?.body);
     if (!iframe?.contentDocument?.body) return;
 
     const doc = iframe.contentDocument;
@@ -193,6 +194,7 @@ export function CanvasFrame({
     });
 
     // Handle click events
+    console.log("[CanvasFrame] Setting up click handler, isDesignMode:", isDesignMode);
     if (isDesignMode) {
       doc.body.onclick = (e: MouseEvent) => {
         e.preventDefault();
@@ -675,10 +677,13 @@ export function CanvasFrame({
     };
   }, [html, injectSelectionBehavior, isStreaming, contentType, reApplyStyles, extractHtmlParts, onlyBodyChanged]);
 
-  // Update selection styles when mode changes
+  // Update selection styles when mode changes or streaming ends
   useEffect(() => {
-    injectSelectionBehavior();
-  }, [isDesignMode, injectSelectionBehavior]);
+    // Re-inject selection behavior when design mode is enabled or streaming ends
+    if (isDesignMode) {
+      injectSelectionBehavior();
+    }
+  }, [isDesignMode, isStreaming, injectSelectionBehavior]);
 
   // Update selected element highlight
   useEffect(() => {

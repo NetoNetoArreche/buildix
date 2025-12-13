@@ -171,13 +171,17 @@ export default function AdminGalleryPage() {
   };
 
   // Compress image to reduce file size (max 4MB for Vercel limit)
+  // Preserves PNG format for images with transparency
   const compressImage = async (file: File, maxSizeMB: number = 3.5): Promise<File> => {
     // If file is already small enough, return as-is
     if (file.size <= maxSizeMB * 1024 * 1024) {
       return file;
     }
 
-    return new Promise((resolve, reject) => {
+    // Check if it's a PNG (which may have transparency)
+    const isPng = file.type === "image/png";
+
+    return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
@@ -206,34 +210,60 @@ export default function AdminGalleryPage() {
             return;
           }
 
+          // For non-PNG images, fill with white background first
+          // PNG images keep transparent background
+          if (!isPng) {
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, width, height);
+          }
+
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Try different quality levels to get under the size limit
-          const tryCompress = (quality: number) => {
+          // For PNG: keep format to preserve transparency, no quality param
+          // For others: use JPEG with quality compression
+          if (isPng) {
             canvas.toBlob(
               (blob) => {
                 if (!blob) {
                   resolve(file);
                   return;
                 }
-
-                if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.3) {
-                  const compressedFile = new File([blob], file.name, {
-                    type: "image/jpeg",
-                    lastModified: Date.now(),
-                  });
-                  resolve(compressedFile);
-                } else {
-                  // Try again with lower quality
-                  tryCompress(quality - 0.1);
-                }
+                const compressedFile = new File([blob], file.name, {
+                  type: "image/png",
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
               },
-              "image/jpeg",
-              quality
+              "image/png"
             );
-          };
+          } else {
+            // Try different quality levels to get under the size limit
+            const tryCompress = (quality: number) => {
+              canvas.toBlob(
+                (blob) => {
+                  if (!blob) {
+                    resolve(file);
+                    return;
+                  }
 
-          tryCompress(0.85);
+                  if (blob.size <= maxSizeMB * 1024 * 1024 || quality <= 0.3) {
+                    const compressedFile = new File([blob], file.name, {
+                      type: "image/jpeg",
+                      lastModified: Date.now(),
+                    });
+                    resolve(compressedFile);
+                  } else {
+                    // Try again with lower quality
+                    tryCompress(quality - 0.1);
+                  }
+                },
+                "image/jpeg",
+                quality
+              );
+            };
+
+            tryCompress(0.85);
+          }
         };
         img.onerror = () => resolve(file);
         img.src = e.target?.result as string;

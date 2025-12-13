@@ -672,6 +672,10 @@ function parseStyles(element: SelectedElementData) {
     transform: styles.transform || "none",
     transformOrigin: styles.transformOrigin || "50% 50% 0px",
     perspective: styles.perspective || "none",
+
+    // Object (for IMG elements)
+    objectFit: styles.objectFit || "cover",
+    objectPosition: styles.objectPosition || "center",
   };
 }
 
@@ -812,10 +816,23 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
   // State for all style properties
   const [styleState, setStyleState] = useState(styles);
 
+  // Check element type
+  const tagLower = element.tagName.toLowerCase();
+  const isImageElement = tagLower === "img";
+
+  // IMG element state
+  const [imageSrc, setImageSrc] = useState<string>(() => {
+    if (!isImageElement) return "";
+    return element.attributes.src || "";
+  });
+  const [imageAlt, setImageAlt] = useState<string>(() => {
+    if (!isImageElement) return "";
+    return element.attributes.alt || "";
+  });
+
   // Icon state (for SVG elements and iconify-icon)
   // Check if element is SVG, an SVG child element (path, circle, rect, etc.), or iconify-icon
   const svgChildElements = ["path", "circle", "rect", "line", "polyline", "polygon", "ellipse", "g", "use", "text", "tspan", "defs", "symbol", "clippath", "mask", "pattern", "image", "switch", "foreignobject"];
-  const tagLower = element.tagName.toLowerCase();
   const isIconifyIcon = tagLower === "iconify-icon";
   const isSvgElement = tagLower === "svg" || svgChildElements.includes(tagLower) || element.outerHTML.trim().startsWith("<svg") || isIconifyIcon;
 
@@ -957,8 +974,14 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
     // Store cleaned original HTML for replacement
     setOriginalOuterHTML(cleanBuildixAttributes(element.outerHTML));
 
-    // Sync icon state for SVG elements and iconify-icon
+    // Sync IMG element state
     const newTagLower = element.tagName.toLowerCase();
+    if (newTagLower === "img") {
+      setImageSrc(element.attributes.src || "");
+      setImageAlt(element.attributes.alt || "");
+    }
+
+    // Sync icon state for SVG elements and iconify-icon
     const newIsIconifyIcon = newTagLower === "iconify-icon";
     const newIsSvg = newTagLower === "svg" || svgChildElements.includes(newTagLower) || element.outerHTML.trim().startsWith("<svg") || newIsIconifyIcon;
 
@@ -1212,6 +1235,46 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
       if (buildixId) {
         targetElement.setAttribute("data-buildix-id", buildixId);
       }
+    }
+
+    // Debounced auto-save
+    debouncedAutoSave();
+  }, [element.id, debouncedAutoSave]);
+
+  // Update image src with live preview and auto-save (for IMG elements)
+  const updateImageSrc = useCallback((value: string) => {
+    setImageSrc(value);
+
+    // Apply in real-time to canvas
+    const iframe = getPreviewIframe();
+    if (!iframe?.contentDocument) return;
+
+    const targetElement = iframe.contentDocument.querySelector(
+      `[data-buildix-id="${element.id}"]`
+    ) as HTMLImageElement;
+
+    if (targetElement && targetElement.tagName.toLowerCase() === "img") {
+      targetElement.src = value;
+    }
+
+    // Debounced auto-save
+    debouncedAutoSave();
+  }, [element.id, debouncedAutoSave]);
+
+  // Update image alt with live preview and auto-save (for IMG elements)
+  const updateImageAlt = useCallback((value: string) => {
+    setImageAlt(value);
+
+    // Apply in real-time to canvas
+    const iframe = getPreviewIframe();
+    if (!iframe?.contentDocument) return;
+
+    const targetElement = iframe.contentDocument.querySelector(
+      `[data-buildix-id="${element.id}"]`
+    ) as HTMLImageElement;
+
+    if (targetElement && targetElement.tagName.toLowerCase() === "img") {
+      targetElement.alt = value;
     }
 
     // Debounced auto-save
@@ -1637,6 +1700,15 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
         onBackgroundChange={updateStyle}
         activeProperties={activeProperties}
         hasActiveProperties={sectionHasActive.background}
+        // IMG element props
+        isImageElement={isImageElement}
+        imageSrc={imageSrc}
+        imageAlt={imageAlt}
+        imageObjectFit={styleState.objectFit}
+        imageObjectPosition={styleState.objectPosition}
+        onImageSrcChange={updateImageSrc}
+        onImageAltChange={updateImageAlt}
+        onImageStyleChange={updateStyle}
       />
 
       {/* Background Assets Section */}

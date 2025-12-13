@@ -18,6 +18,15 @@ interface BackgroundSectionProps {
   onBackgroundChange: (property: string, value: string) => void;
   activeProperties?: Record<string, boolean>;
   hasActiveProperties?: boolean;
+  // IMG element props
+  isImageElement?: boolean;
+  imageSrc?: string;
+  imageAlt?: string;
+  imageObjectFit?: string;
+  imageObjectPosition?: string;
+  onImageSrcChange?: (src: string) => void;
+  onImageAltChange?: (alt: string) => void;
+  onImageStyleChange?: (property: string, value: string) => void;
 }
 
 type BackgroundType = "solid" | "linear" | "radial" | "conic";
@@ -225,6 +234,15 @@ export function BackgroundSection({
   backgroundPosition,
   onBackgroundChange,
   hasActiveProperties,
+  // IMG element props
+  isImageElement,
+  imageSrc,
+  imageAlt,
+  imageObjectFit,
+  imageObjectPosition,
+  onImageSrcChange,
+  onImageAltChange,
+  onImageStyleChange,
 }: BackgroundSectionProps) {
   const [isImageSelectorOpen, setIsImageSelectorOpen] = useState(false);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
@@ -260,7 +278,7 @@ export function BackgroundSection({
   }, [backgroundImage, parseImageOverlay]);
 
   // Background assets from store
-  const { addBackgroundAsset } = useEditorStore();
+  const { addBackgroundAsset, backgroundAssets, removeBackgroundAsset } = useEditorStore();
 
   // Handle applying a background asset
   const handleApplyAsset = useCallback(
@@ -327,6 +345,13 @@ export function BackgroundSection({
   }, [extractImageUrl]);
 
   const handleImageSelect = (url: string) => {
+    // For IMG elements, update the src attribute
+    if (isImageElement && onImageSrcChange) {
+      onImageSrcChange(url);
+      setIsImageSelectorOpen(false);
+      return;
+    }
+    // For background images
     const bgValue = applyImageOverlay(`url('${url}')`, imageOverlay);
     isInternalUpdateRef.current = true;
     onBackgroundChange("backgroundImage", bgValue);
@@ -666,11 +691,13 @@ export function BackgroundSection({
           </div>
         )}
 
-        {/* Background Image */}
+        {/* Image Section - For IMG elements or Background Image */}
         <div className="space-y-1.5 pt-2 border-t border-border/50">
           <div className="flex items-center justify-between">
-            <label className="text-[10px] text-muted-foreground">Image</label>
-            {backgroundImage && (
+            <label className="text-[10px] text-muted-foreground">
+              {isImageElement ? "Image Source" : "Image"}
+            </label>
+            {(isImageElement ? imageSrc : backgroundImage) && !isImageElement && (
               <button
                 onClick={() => onBackgroundChange("backgroundImage", "")}
                 className="text-[10px] text-muted-foreground hover:text-destructive"
@@ -680,7 +707,109 @@ export function BackgroundSection({
             )}
           </div>
 
-          {backgroundImage ? (
+          {/* IMG Element Preview */}
+          {isImageElement && imageSrc ? (
+            <div className="space-y-2">
+              {/* Image Preview with checkerboard for transparency */}
+              <div
+                className="relative h-20 w-full overflow-hidden rounded border cursor-pointer group"
+                onClick={() => setIsImageSelectorOpen(true)}
+                style={{
+                  backgroundImage: `
+                    linear-gradient(45deg, #404040 25%, transparent 25%),
+                    linear-gradient(-45deg, #404040 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #404040 75%),
+                    linear-gradient(-45deg, transparent 75%, #404040 75%)
+                  `,
+                  backgroundSize: '8px 8px',
+                  backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+                  backgroundColor: '#2a2a2a'
+                }}
+              >
+                <img
+                  src={imageSrc}
+                  alt={imageAlt || "Preview"}
+                  className="h-full w-full object-contain transition-transform group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-[10px] font-medium">Change Image</span>
+                </div>
+              </div>
+
+              {/* Source URL Input */}
+              <div className="space-y-0.5">
+                <label className="text-[9px] text-muted-foreground">URL</label>
+                <input
+                  type="text"
+                  value={imageSrc}
+                  onChange={(e) => onImageSrcChange?.(e.target.value)}
+                  placeholder="https://example.com/image.png"
+                  className="h-6 w-full rounded border bg-background px-1.5 text-[10px] font-mono focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              {/* Alt Text Input */}
+              <div className="space-y-0.5">
+                <label className="text-[9px] text-muted-foreground">Alt Text</label>
+                <input
+                  type="text"
+                  value={imageAlt || ""}
+                  onChange={(e) => onImageAltChange?.(e.target.value)}
+                  placeholder="Image description"
+                  className="h-6 w-full rounded border bg-background px-1.5 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              {/* Object Fit & Position Controls */}
+              <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border/30">
+                {/* Object Fit */}
+                <div className="space-y-0.5">
+                  <label className="text-[9px] text-muted-foreground">Fit</label>
+                  <select
+                    value={imageObjectFit || "cover"}
+                    onChange={(e) => onImageStyleChange?.("objectFit", e.target.value)}
+                    className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
+                  >
+                    <option value="cover">Cover</option>
+                    <option value="contain">Contain</option>
+                    <option value="fill">Fill</option>
+                    <option value="none">None</option>
+                    <option value="scale-down">Scale Down</option>
+                  </select>
+                </div>
+
+                {/* Object Position */}
+                <div className="space-y-0.5">
+                  <label className="text-[9px] text-muted-foreground">Position</label>
+                  <select
+                    value={imageObjectPosition || "center"}
+                    onChange={(e) => onImageStyleChange?.("objectPosition", e.target.value)}
+                    className="h-6 w-full rounded border bg-background text-foreground px-1 text-[10px] focus:outline-none focus:ring-1 focus:ring-ring [&>option]:bg-background [&>option]:text-foreground"
+                  >
+                    <option value="center">Center</option>
+                    <option value="top">Top</option>
+                    <option value="bottom">Bottom</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                    <option value="top left">Top Left</option>
+                    <option value="top right">Top Right</option>
+                    <option value="bottom left">Bottom Left</option>
+                    <option value="bottom right">Bottom Right</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ) : isImageElement && !imageSrc ? (
+            <button
+              onClick={() => setIsImageSelectorOpen(true)}
+              className="flex h-10 w-full items-center justify-center rounded border border-dashed hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <ImageIcon className="h-3 w-3" />
+                <span className="text-[10px]">Select Image</span>
+              </div>
+            </button>
+          ) : backgroundImage ? (
             <div
               className="relative h-12 w-full overflow-hidden rounded border cursor-pointer group"
               onClick={() => setIsImageSelectorOpen(true)}
@@ -853,6 +982,59 @@ export function BackgroundSection({
           <p className="text-[9px] text-muted-foreground text-center mt-1.5">
             Video, Embed (Unicorn Studio, Spline), or Image with effects
           </p>
+
+          {/* Active Background Assets */}
+          {backgroundAssets && backgroundAssets.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <label className="text-[10px] text-muted-foreground">Active Assets</label>
+              {backgroundAssets.map((asset) => (
+                <div key={asset.id} className="flex items-center gap-2 p-2 rounded border bg-muted/30">
+                  {asset.type === "image" && (
+                    <div
+                      className="h-10 w-10 rounded flex-shrink-0"
+                      style={{
+                        backgroundImage: `
+                          linear-gradient(45deg, #404040 25%, transparent 25%),
+                          linear-gradient(-45deg, #404040 25%, transparent 25%),
+                          linear-gradient(45deg, transparent 75%, #404040 75%),
+                          linear-gradient(-45deg, transparent 75%, #404040 75%)
+                        `,
+                        backgroundSize: '8px 8px',
+                        backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px',
+                        backgroundColor: '#303030'
+                      }}
+                    >
+                      <img src={asset.src} className="h-full w-full object-cover rounded" alt="" />
+                    </div>
+                  )}
+                  {asset.type === "video" && (
+                    <video src={asset.src} className="h-10 w-10 object-cover rounded flex-shrink-0" muted />
+                  )}
+                  {asset.type === "embed" && (
+                    <div className="h-10 w-10 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-medium capitalize">{asset.type}</span>
+                    {asset.embedType && (
+                      <span className="text-[9px] text-muted-foreground ml-1">({asset.embedType})</span>
+                    )}
+                    <p className="text-[9px] text-muted-foreground truncate">
+                      {asset.src ? asset.src.substring(0, 25) + "..." : "Embed code"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => removeBackgroundAsset(asset.id)}
+                    className="p-1 hover:bg-destructive/20 rounded flex-shrink-0"
+                    title="Remove asset"
+                  >
+                    <X className="h-3 w-3 text-destructive" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </CollapsibleSection>
