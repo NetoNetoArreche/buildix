@@ -244,10 +244,10 @@ export function CanvasFrame({
           el.classList.remove("buildix-selected");
         });
 
-        // Remove previous labels and overlays
-        const prevLabel = doc.querySelector(".buildix-element-label");
-        if (prevLabel) prevLabel.remove();
+        // Remove previous labels and overlays (use querySelectorAll to catch all)
+        doc.querySelectorAll(".buildix-element-label").forEach(el => el.remove());
         doc.querySelectorAll(".buildix-spacing-label").forEach(el => el.remove());
+        doc.querySelectorAll(".buildix-action-bar").forEach(el => el.remove());
 
         if (elementId) {
           target.classList.add("buildix-selected");
@@ -705,13 +705,12 @@ export function CanvasFrame({
     doc.querySelectorAll(".buildix-selected").forEach((el) => {
       el.classList.remove("buildix-selected");
     });
-    const prevLabel = doc.querySelector(".buildix-element-label");
-    if (prevLabel) prevLabel.remove();
+    // Remove ALL previous labels (use querySelectorAll to catch any duplicates)
+    doc.querySelectorAll(".buildix-element-label").forEach(el => el.remove());
     // Also clean up any old spacing labels
     doc.querySelectorAll(".buildix-spacing-label").forEach(el => el.remove());
-    // Clean up action bar
-    const prevActionBar = doc.querySelector(".buildix-action-bar");
-    if (prevActionBar) prevActionBar.remove();
+    // Clean up ALL action bars (use querySelectorAll to catch any duplicates)
+    doc.querySelectorAll(".buildix-action-bar").forEach(el => el.remove());
 
     // Only show labels in Design mode
     if (!isDesignMode) {
