@@ -36,7 +36,7 @@ import {
   ArrowRightLeft,
   Trash2,
 } from "lucide-react";
-import { toPng, toBlob } from "html-to-image";
+import { toPng, toBlob, getFontEmbedCSS } from "html-to-image";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { injectBackgroundAssets } from "@/lib/background-assets";
@@ -184,12 +184,30 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
         return;
       }
 
+      const iframeWindow = iframe.contentWindow;
+
+      // Aguardar carregamento de todas as fontes no iframe
+      if (iframeWindow?.document?.fonts) {
+        await iframeWindow.document.fonts.ready;
+      }
+
+      // Pré-computar CSS das fontes embarcadas
+      let fontEmbedCSS: string | undefined;
+      try {
+        fontEmbedCSS = await getFontEmbedCSS(container);
+      } catch (fontError) {
+        console.warn("Não foi possível embarcar fontes:", fontError);
+      }
+
       // Use html-to-image to convert to PNG
       const dataUrl = await toPng(container, {
         width: container.offsetWidth,
         height: container.offsetHeight,
         pixelRatio: 2, // High resolution
         backgroundColor: "#000",
+        // Fontes embarcadas como base64 para garantir renderização correta
+        fontEmbedCSS,
+        preferredFontFormat: "woff2",
       });
 
       // Download the image
@@ -234,12 +252,26 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
     try {
       const zip = new JSZip();
       let failedSlides = 0;
+      const iframeWindow = iframe.contentWindow;
+
+      // 1. Aguardar carregamento de todas as fontes no iframe
+      if (iframeWindow?.document?.fonts) {
+        await iframeWindow.document.fonts.ready;
+      }
+
+      // 2. Pré-computar CSS das fontes embarcadas (uma vez para todos os slides)
+      const firstSlide = slides[0] as HTMLElement;
+      let fontEmbedCSS: string | undefined;
+      try {
+        fontEmbedCSS = await getFontEmbedCSS(firstSlide);
+      } catch (fontError) {
+        console.warn("Não foi possível embarcar fontes:", fontError);
+      }
 
       for (let i = 0; i < slides.length; i++) {
         const slide = slides[i] as HTMLElement;
 
         // Get the computed background color of the slide
-        const iframeWindow = iframe.contentWindow;
         const computedStyle = iframeWindow?.getComputedStyle(slide);
         let bgColor = computedStyle?.backgroundColor || "#000";
 
@@ -258,6 +290,9 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
             // Ensure all styles are captured including Tailwind classes
             skipAutoScale: true,
             cacheBust: true,
+            // Fontes embarcadas como base64 para garantir renderização correta
+            fontEmbedCSS,
+            preferredFontFormat: "woff2",
             // Handle failed images gracefully
             filter: (node) => {
               // Skip broken images to prevent export failure
