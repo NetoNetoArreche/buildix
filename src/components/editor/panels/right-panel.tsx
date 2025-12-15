@@ -605,6 +605,28 @@ function TabButton({ active, onClick, icon: Icon, label }: TabButtonProps) {
   );
 }
 
+// Helper function to extract and normalize font-family
+// Handles cases like "'Playfair Display', serif" → "Playfair Display"
+function extractPrimaryFont(fontFamily: string): string {
+  if (!fontFamily || fontFamily === "inherit" || fontFamily === "initial") {
+    return fontFamily || "";
+  }
+
+  // Split by comma and clean each font name
+  const fonts = fontFamily.split(",").map(f =>
+    f.trim().replace(/^['"]|['"]$/g, "") // Remove quotes
+  );
+
+  // Generic fonts that should be kept as-is if they're the only option
+  const genericFonts = ["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui", "ui-serif", "ui-sans-serif", "ui-monospace"];
+
+  // Find the first non-generic font
+  const primaryFont = fonts.find(f => !genericFonts.includes(f.toLowerCase()));
+
+  // Return primary font, or the first font in the list, or empty string
+  return primaryFont || fonts[0] || "";
+}
+
 // Parse computed styles from element data
 function parseStyles(element: SelectedElementData) {
   const styles = element.computedStyles || {};
@@ -615,6 +637,9 @@ function parseStyles(element: SelectedElementData) {
     bottom: styles[`${prefix}Bottom`] || "0px",
     left: styles[`${prefix}Left`] || "0px",
   });
+
+  // Extract and normalize font family
+  const normalizedFontFamily = extractPrimaryFont(styles.fontFamily || "");
 
   return {
     // Spacing
@@ -630,7 +655,7 @@ function parseStyles(element: SelectedElementData) {
     maxHeight: styles.maxHeight || "none",
 
     // Typography
-    fontFamily: styles.fontFamily || "inherit",
+    fontFamily: normalizedFontFamily,
     fontSize: styles.fontSize || "16px",
     fontWeight: styles.fontWeight || "400",
     lineHeight: styles.lineHeight || "normal",
@@ -690,7 +715,28 @@ function applyLiveStyleToCanvas(elementId: string, cssProperty: string, value: s
   ) as HTMLElement;
 
   if (targetElement) {
-    targetElement.style.setProperty(cssProperty, value);
+    // Special handling for text color with gradients
+    if (cssProperty === "color") {
+      const isGradient = value.includes("gradient");
+
+      if (isGradient) {
+        // Apply text gradient technique: background-clip text
+        targetElement.style.setProperty("background", value);
+        targetElement.style.setProperty("-webkit-background-clip", "text");
+        targetElement.style.setProperty("background-clip", "text");
+        targetElement.style.setProperty("-webkit-text-fill-color", "transparent");
+        targetElement.style.setProperty("color", "transparent");
+      } else {
+        // Solid color - reset gradient properties and apply color normally
+        targetElement.style.removeProperty("background");
+        targetElement.style.removeProperty("-webkit-background-clip");
+        targetElement.style.removeProperty("background-clip");
+        targetElement.style.removeProperty("-webkit-text-fill-color");
+        targetElement.style.setProperty("color", value);
+      }
+    } else {
+      targetElement.style.setProperty(cssProperty, value);
+    }
   }
 }
 
@@ -1426,7 +1472,21 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
     if (styleState.lineHeight !== "normal") inlineStyles.push(`line-height: ${styleState.lineHeight}`);
     if (styleState.letterSpacing !== "normal") inlineStyles.push(`letter-spacing: ${styleState.letterSpacing}`);
     if (styleState.textAlign !== "left") inlineStyles.push(`text-align: ${styleState.textAlign}`);
-    if (styleState.color) inlineStyles.push(`color: ${styleState.color}`);
+
+    // Text color - special handling for gradients
+    if (styleState.color) {
+      const isGradient = styleState.color.includes("gradient");
+      if (isGradient) {
+        // Apply text gradient technique: background-clip text
+        inlineStyles.push(`background: ${styleState.color}`);
+        inlineStyles.push(`-webkit-background-clip: text`);
+        inlineStyles.push(`background-clip: text`);
+        inlineStyles.push(`-webkit-text-fill-color: transparent`);
+        inlineStyles.push(`color: transparent`);
+      } else {
+        inlineStyles.push(`color: ${styleState.color}`);
+      }
+    }
 
     // Background
     if (styleState.backgroundColor && styleState.backgroundColor !== "transparent" && styleState.backgroundColor !== "rgba(0, 0, 0, 0)") {
@@ -1909,7 +1969,7 @@ function PromptTab({
     .join(" ") || "";
 
   return (
-    <div className="flex flex-col h-full p-3 space-y-3">
+    <div className="p-2 space-y-3 overflow-hidden">
       {/* Insert After Mode Banner */}
       {insertAfterMode && insertAfterElementHtml && (
         <div className="rounded-lg border border-violet-500/50 bg-violet-500/10 p-3 space-y-2">
@@ -1939,229 +1999,206 @@ function PromptTab({
 
       {/* Quick Actions */}
       {!insertAfterMode && (
-      <div className="space-y-2">
-        <label className="text-xs font-medium text-muted-foreground">
-          Quick Actions
-        </label>
-        <div className="flex flex-wrap gap-1.5">
-          {quickActions.map((action) => (
-            <button
-              key={action}
-              onClick={() => setPrompt(action)}
-              className="rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted"
-            >
-              {action}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <label className="text-xs font-medium text-muted-foreground">
+            Quick Actions
+          </label>
+          <div className="flex flex-wrap gap-1.5">
+            {quickActions.map((action) => (
+              <button
+                key={action}
+                onClick={() => setPrompt(action)}
+                className="rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-muted whitespace-nowrap"
+              >
+                {action}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
       )}
 
       {!insertAfterMode && <Separator />}
 
-      {/* Main Input Area */}
-      <div className="flex-1 flex flex-col space-y-3">
-        {/* Textarea */}
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder={insertAfterMode
-            ? "Describe what content to add after the element... (e.g., Add a testimonials section with 3 cards)"
-            : "Describe what you want to change... (type @ for snippets)"
+      {/* Textarea */}
+      <textarea
+        value={prompt}
+        onChange={(e) => setPrompt(e.target.value)}
+        placeholder={insertAfterMode
+          ? "Describe what content to add after the element... (e.g., Add a testimonials section with 3 cards)"
+          : "Describe what you want to change... (type @ for snippets)"
+        }
+        className="min-h-[80px] w-full resize-none rounded-md border bg-transparent p-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            handleApply();
           }
-          className="min-h-[80px] flex-1 w-full resize-none rounded-md border bg-transparent p-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-              handleApply();
-            }
-            // Open snippets modal on @
-            if (e.key === "@") {
-              e.preventDefault();
-              setSnippetsModalOpen(true);
-            }
-          }}
+          if (e.key === "@") {
+            e.preventDefault();
+            setSnippetsModalOpen(true);
+          }
+        }}
+      />
+
+      {/* Selected Templates/Snippets/Components Tags */}
+      {(selectedTemplates.length > 0 || selectedSnippets.length > 0 || selectedComponents.length > 0) && (
+        <div className="flex flex-wrap gap-1.5">
+          {selectedTemplates.map((template) => (
+            <TemplateTag
+              key={template.id}
+              template={template}
+              onRemove={() => handleRemoveTemplate(template.id)}
+            />
+          ))}
+          {selectedSnippets.map((snippet) => (
+            <SnippetTag
+              key={snippet.id}
+              snippet={snippet}
+              onRemove={() =>
+                setSelectedSnippets((prev) => prev.filter((s) => s.id !== snippet.id))
+              }
+            />
+          ))}
+          {selectedComponents.map((component) => (
+            <ComponentTag
+              key={component.id}
+              component={component}
+              onRemove={() =>
+                setSelectedComponents((prev) => prev.filter((c) => c.id !== component.id))
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Reference Image Preview */}
+      {referenceImage && (
+        <div className="relative rounded-md border overflow-hidden">
+          <img
+            src={referenceImage.preview}
+            alt="Reference"
+            className="w-full h-24 object-cover"
+          />
+          <button
+            onClick={() => setReferenceImage(null)}
+            className="absolute top-1 right-1 p-1 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+          >
+            <X className="h-3 w-3 text-white" />
+          </button>
+          <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] bg-black/50 text-white">
+            Reference Image
+          </div>
+        </div>
+      )}
+
+      {/* Selected Element Info */}
+      <div className="rounded-md border bg-muted/30 p-2 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Selected:</span>
+          <span className="text-xs font-medium shrink-0">{elementTag}</span>
+        </div>
+        {elementClasses && (
+          <code className="text-[10px] text-muted-foreground block break-all">
+            {elementClasses}
+          </code>
+        )}
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-1 border-t pt-2 flex-wrap">
+        {/* Model Selector */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs px-2">
+              <Sparkles className="h-3.5 w-3.5" />
+              {selectedModel === "gemini" ? "Gemini" : "Claude"}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
+              <Sparkles className="h-3.5 w-3.5 mr-2" />
+              Gemini Pro
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
+              <Sparkles className="h-3.5 w-3.5 mr-2" />
+              Claude Sonnet
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* @ Snippets Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setSnippetsModalOpen(true)}
+            >
+              <AtSign className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Insert snippet or component</TooltipContent>
+        </Tooltip>
+
+        {/* Image Attachment */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-8 w-8", referenceImage && "text-blue-400")}
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Attach reference image</TooltipContent>
+        </Tooltip>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="hidden"
+          onChange={handleImageUpload}
         />
 
-        {/* Selected Templates/Snippets/Components Tags */}
-        {(selectedTemplates.length > 0 || selectedSnippets.length > 0 || selectedComponents.length > 0) && (
-          <div className="flex flex-wrap gap-1.5">
-            {selectedTemplates.map((template) => (
-              <TemplateTag
-                key={template.id}
-                template={template}
-                onRemove={() => handleRemoveTemplate(template.id)}
-              />
-            ))}
-            {selectedSnippets.map((snippet) => (
-              <SnippetTag
-                key={snippet.id}
-                snippet={snippet}
-                onRemove={() =>
-                  setSelectedSnippets((prev) => prev.filter((s) => s.id !== snippet.id))
-                }
-              />
-            ))}
-            {selectedComponents.map((component) => (
-              <ComponentTag
-                key={component.id}
-                component={component}
-                onRemove={() =>
-                  setSelectedComponents((prev) => prev.filter((c) => c.id !== component.id))
-                }
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Reference Image Preview */}
-        {referenceImage && (
-          <div className="relative rounded-md border overflow-hidden">
-            <img
-              src={referenceImage.preview}
-              alt="Reference"
-              className="w-full h-24 object-cover"
-            />
-            <button
-              onClick={() => setReferenceImage(null)}
-              className="absolute top-1 right-1 p-1 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+        {/* Prompt Builder */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setPromptBuilderOpen(true)}
             >
-              <X className="h-3 w-3 text-white" />
-            </button>
-            <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] bg-black/50 text-white">
-              Reference Image
-            </div>
-          </div>
-        )}
-
-        {/* Selected Element Info */}
-        <div className="rounded-md border bg-muted/30 p-2 space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Selected:</span>
-            <span className="text-xs font-medium">{elementTag}</span>
-            {elementIdAttr && (
-              <code className="text-[10px] text-blue-400">{elementIdAttr}</code>
-            )}
-          </div>
-          {elementClasses && (
-            <code className="text-[10px] text-muted-foreground block truncate">
-              {elementClasses}
-            </code>
-          )}
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex items-center gap-1 border-t pt-2">
-          {/* Model Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
-                <Sparkles className="h-3.5 w-3.5" />
-                {selectedModel === "gemini" ? "Gemini" : "Claude"}
-                <ChevronDown className="h-3 w-3 opacity-50" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
-                <Sparkles className="h-3.5 w-3.5 mr-2" />
-                Gemini Pro
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
-                <Sparkles className="h-3.5 w-3.5 mr-2" />
-                Claude Sonnet
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* @ Snippets Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setSnippetsModalOpen(true)}
-              >
-                <AtSign className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Insert snippet or component</TooltipContent>
-          </Tooltip>
-
-          {/* Image Attachment */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn("h-8 w-8", referenceImage && "text-blue-400")}
-                onClick={() => imageInputRef.current?.click()}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Attach reference image</TooltipContent>
-          </Tooltip>
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif"
-            className="hidden"
-            onChange={handleImageUpload}
-          />
-
-          {/* Prompt Builder */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => setPromptBuilderOpen(true)}
-              >
-                <Wand2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Prompt Builder</TooltipContent>
-          </Tooltip>
-
-          {/* Spacer */}
-          <div className="flex-1" />
-
-          {/* Character count indicator */}
-          {(selectedTemplates.length > 0 || selectedSnippets.length > 0 || selectedComponents.length > 0) && (
-            <span className="text-[10px] text-muted-foreground">
-              +{(
-                (selectedSnippets.reduce((acc, s) => acc + s.charCount, 0) +
-                  selectedComponents.reduce((acc, c) => acc + c.charCount, 0)) / 1000
-              ).toFixed(1)}K
-              {selectedTemplates.length > 0 && ` +${selectedTemplates.length} template${selectedTemplates.length > 1 ? 's' : ''}`}
-            </span>
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant="buildix"
-            className="flex-1"
-            disabled={!prompt.trim() || isGenerating}
-            onClick={handleApply}
-          >
-            {isGenerating ? (
-              <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            ) : insertAfterMode ? (
-              <Plus className="mr-2 h-3.5 w-3.5" />
-            ) : (
-              <Sparkles className="mr-2 h-3.5 w-3.5" />
-            )}
-            {insertAfterMode ? "Insert Content" : "Apply Changes"}
-          </Button>
-        </div>
-
-        <p className="text-center text-[10px] text-muted-foreground">
-          Costs 1 prompt. Will autosave after completion.
-        </p>
+              <Wand2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Prompt Builder</TooltipContent>
+        </Tooltip>
       </div>
+
+      {/* Action Button */}
+      <Button
+        variant="buildix"
+        className="w-full"
+        disabled={!prompt.trim() || isGenerating}
+        onClick={handleApply}
+      >
+        {isGenerating ? (
+          <div className="mr-2 h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        ) : insertAfterMode ? (
+          <Plus className="mr-2 h-3.5 w-3.5" />
+        ) : (
+          <Sparkles className="mr-2 h-3.5 w-3.5" />
+        )}
+        {insertAfterMode ? "Insert Content" : "Apply Changes"}
+      </Button>
+
+      <p className="text-center text-[10px] text-muted-foreground">
+        Costs 1 prompt. Will autosave after completion.
+      </p>
 
       {/* Modals */}
       <CodeSnippetsModal
@@ -2195,7 +2232,7 @@ function CodeTab({ element }: { element: SelectedElementData }) {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-2 overflow-hidden">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <label className="text-xs font-medium text-muted-foreground">
@@ -2233,10 +2270,10 @@ function CodeTab({ element }: { element: SelectedElementData }) {
           </label>
           <div className="space-y-1">
             {Object.entries(element.attributes).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-2 text-xs">
+              <div key={key} className="text-xs">
                 <code className="rounded bg-muted px-1.5 py-0.5">{key}</code>
-                <span className="text-muted-foreground">=</span>
-                <code className="text-muted-foreground truncate">{value}</code>
+                <span className="text-muted-foreground"> = </span>
+                <code className="text-muted-foreground break-all">{value}</code>
               </div>
             ))}
           </div>

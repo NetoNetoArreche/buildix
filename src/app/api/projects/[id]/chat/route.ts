@@ -30,7 +30,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: projectId } = await params;
     const body = await request.json();
-    const { role, content, model } = body;
+    const { role, content, model, generatedHtml } = body;
 
     if (!role || !content) {
       return NextResponse.json(
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         role,
         content,
         model,
+        generatedHtml,
       },
     });
 

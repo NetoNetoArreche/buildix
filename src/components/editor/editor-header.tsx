@@ -502,32 +502,41 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
 
       {/* Center Section - View Mode Toggle */}
       <div className="flex items-center gap-1 rounded-lg border bg-muted/50 p-1">
-        {viewModes.map(({ mode, icon: Icon, label }) => (
-          <Tooltip key={mode}>
-            <TooltipTrigger asChild>
-              <Button
-                variant={viewMode === mode ? "secondary" : "ghost"}
-                size="sm"
-                className={cn(
-                  "h-7 gap-1.5 px-3",
-                  viewMode === mode && "bg-background shadow-sm"
-                )}
-                onClick={() => {
-                  // Sync HTML from iframe before switching away from design mode
-                  // This ensures all DOM changes are saved to the store
-                  if (viewMode === "design" && mode !== "design") {
-                    syncHtmlFromIframe();
-                  }
-                  setViewMode(mode);
-                }}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{label}</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{label}</TooltipContent>
-          </Tooltip>
-        ))}
+        {viewModes.map(({ mode, icon: Icon, label }) => {
+          // Disable Design mode when Canvas Mode is active
+          const isDisabled = mode === "design" && canvasModeOpen;
+          return (
+            <Tooltip key={mode}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={viewMode === mode ? "secondary" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "h-7 gap-1.5 px-3",
+                    viewMode === mode && "bg-background shadow-sm",
+                    isDisabled && "opacity-50 cursor-not-allowed"
+                  )}
+                  disabled={isDisabled}
+                  onClick={() => {
+                    if (isDisabled) return;
+                    // Sync HTML from iframe before switching away from design mode
+                    // This ensures all DOM changes are saved to the store
+                    if (viewMode === "design" && mode !== "design") {
+                      syncHtmlFromIframe();
+                    }
+                    setViewMode(mode);
+                  }}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isDisabled ? "Design mode not available in Canvas Mode" : label}
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
       </div>
 
       {/* Right Section */}
@@ -599,7 +608,14 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
               variant={canvasModeOpen ? "secondary" : "outline"}
               size="sm"
               className="h-8 gap-1.5 px-2"
-              onClick={toggleCanvasMode}
+              onClick={() => {
+                // If enabling Canvas Mode while in Design mode, switch to Preview first
+                if (!canvasModeOpen && viewMode === "design") {
+                  syncHtmlFromIframe();
+                  setViewMode("preview");
+                }
+                toggleCanvasMode();
+              }}
             >
               <LayoutGrid className="h-4 w-4" />
               <span className="hidden sm:inline">Canvas</span>

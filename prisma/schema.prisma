@@ -154,11 +154,12 @@ model PageVersion {
 
 // ChatMessage - for AI chat history
 model ChatMessage {
-  id        String   @id @default(cuid())
-  role      String   // "user" | "assistant"
-  content   String   @db.Text
-  model     String?  // "gemini" | "claude"
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  role          String   // "user" | "assistant"
+  content       String   @db.Text
+  model         String?  // "gemini" | "claude"
+  generatedHtml String?  @db.Text // Store generated HTML for assistant messages
+  createdAt     DateTime @default(now())
 
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

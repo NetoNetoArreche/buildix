@@ -366,6 +366,15 @@ export function CanvasFrame({
             }
           });
 
+          // Normalize fontFamily - remove extra quotes and clean up
+          if (computedStyles.fontFamily) {
+            // getComputedStyle returns font-family with quotes, e.g., '"Playfair Display", serif'
+            // We need to clean it up for proper matching in the UI
+            computedStyles.fontFamily = computedStyles.fontFamily
+              .replace(/^["']|["']$/g, "") // Remove outer quotes
+              .trim();
+          }
+
           // Extract element data
           // Use getAttribute for className because SVG elements have className as SVGAnimatedString
           const classString = typeof target.className === "string"

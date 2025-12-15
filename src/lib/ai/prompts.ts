@@ -760,9 +760,19 @@ export function buildPromptFromOptions(options: {
   headingFont?: string | null;
   bodyFont?: string | null;
   headingSize?: string | null;
+  subheadingSize?: string | null;
+  bodyTextSize?: string | null;
   headingWeight?: string | null;
   letterSpacing?: string | null;
   animation?: string | null;
+  // New animation system parameters
+  animationType?: string | null;
+  animationScene?: string | null;
+  animationDuration?: number;
+  animationDelay?: number;
+  animationTiming?: string | null;
+  animationIterations?: string | null;
+  animationDirection?: string | null;
   additionalInstructions?: string;
 }): string {
   const parts: string[] = [];
@@ -785,7 +795,7 @@ export function buildPromptFromOptions(options: {
     }
   }
 
-  if (options.framing && options.framing !== "full-screen") {
+  if (options.framing) {
     const framing = PROMPT_BUILDER_OPTIONS.framing.find((f) => f.value === options.framing);
     if (framing) {
       parts.push(`using ${framing.label.toLowerCase()} framing`);
@@ -831,6 +841,26 @@ export function buildPromptFromOptions(options: {
     }
   }
 
+  // Border Color
+  if (options.borderColor && options.borderColor !== "transparent") {
+    const borderColor = PROMPT_BUILDER_OPTIONS.borderColors.find(
+      (c) => c.value === options.borderColor
+    );
+    if (borderColor) {
+      parts.push(`${borderColor.label.toLowerCase()} border color`);
+    }
+  }
+
+  // Typeface Type (Sans, Serif, Mono, etc.)
+  if (options.typefaceType) {
+    const typefaceType = PROMPT_BUILDER_OPTIONS.typefaceTypes.find(
+      (t) => t.value === options.typefaceType
+    );
+    if (typefaceType) {
+      parts.push(`${typefaceType.label.toLowerCase()} typeface family`);
+    }
+  }
+
   if (options.headingFont) {
     const headingFont = PROMPT_BUILDER_OPTIONS.headingFonts.find(
       (f) => f.value === options.headingFont
@@ -858,6 +888,26 @@ export function buildPromptFromOptions(options: {
     }
   }
 
+  // Subheading Size
+  if (options.subheadingSize) {
+    const subheadingSize = PROMPT_BUILDER_OPTIONS.subheadingSizes.find(
+      (s) => s.value === options.subheadingSize
+    );
+    if (subheadingSize) {
+      parts.push(`${subheadingSize.label} subheading size`);
+    }
+  }
+
+  // Body Text Size
+  if (options.bodyTextSize) {
+    const bodyTextSize = PROMPT_BUILDER_OPTIONS.bodyTextSizes.find(
+      (s) => s.value === options.bodyTextSize
+    );
+    if (bodyTextSize) {
+      parts.push(`${bodyTextSize.label} body text size`);
+    }
+  }
+
   if (options.headingWeight) {
     const headingWeight = PROMPT_BUILDER_OPTIONS.headingWeights.find(
       (w) => w.value === options.headingWeight
@@ -882,6 +932,68 @@ export function buildPromptFromOptions(options: {
     );
     if (animation) {
       parts.push(`${animation.label.toLowerCase()} animations`);
+    }
+  }
+
+  // Handle new animation system
+  if (options.animationType) {
+    const animationType = PROMPT_BUILDER_OPTIONS.animationTypes.find(
+      (a) => a.value === options.animationType
+    );
+    if (animationType) {
+      const animationParts: string[] = [`Apply ${animationType.label.toLowerCase()} animation effect`];
+
+      // Add scene description
+      if (options.animationScene) {
+        const scene = PROMPT_BUILDER_OPTIONS.animationScenes.find(
+          (s) => s.value === options.animationScene
+        );
+        if (scene) {
+          animationParts.push(`with ${scene.label.toLowerCase()} sequence`);
+        }
+      }
+
+      // Add timing
+      if (options.animationTiming) {
+        const timing = PROMPT_BUILDER_OPTIONS.animationTimings.find(
+          (t) => t.value === options.animationTiming
+        );
+        if (timing) {
+          animationParts.push(`using ${timing.label.toLowerCase()} easing`);
+        }
+      }
+
+      // Add duration (only if different from default)
+      if (options.animationDuration && options.animationDuration !== 0.8) {
+        animationParts.push(`${options.animationDuration}s duration`);
+      }
+
+      // Add delay (only if > 0)
+      if (options.animationDelay && options.animationDelay > 0) {
+        animationParts.push(`${options.animationDelay}s delay`);
+      }
+
+      // Add iterations (only if not default "1")
+      if (options.animationIterations && options.animationIterations !== "1") {
+        const iteration = PROMPT_BUILDER_OPTIONS.animationIterations.find(
+          (i) => i.value === options.animationIterations
+        );
+        if (iteration) {
+          animationParts.push(`${iteration.label.toLowerCase()} iteration`);
+        }
+      }
+
+      // Add direction (only if not default)
+      if (options.animationDirection && options.animationDirection !== "normal") {
+        const direction = PROMPT_BUILDER_OPTIONS.animationDirections.find(
+          (d) => d.value === options.animationDirection
+        );
+        if (direction) {
+          animationParts.push(`${direction.label.toLowerCase()} direction`);
+        }
+      }
+
+      parts.push(animationParts.join(" "));
     }
   }
 

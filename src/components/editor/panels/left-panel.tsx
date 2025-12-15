@@ -89,6 +89,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     setStreamingHtml,
     setIsStreaming,
     clearStreaming,
+    setViewMode,
   } = useEditorStore();
   const { generate, error: aiError } = useAI();
   const { savePage, saveChat, updateProject, createPage } = useProject();
@@ -147,6 +148,8 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
         role: msg.role as "user" | "assistant",
         content: msg.content,
         model: msg.model as AIModel | undefined,
+        generatedHtml: (msg as { generatedHtml?: string }).generatedHtml || undefined,
+        showPreviewButton: !!(msg as { generatedHtml?: string }).generatedHtml,
         createdAt: new Date(msg.createdAt),
       }));
       setMessages(loadedMessages);
@@ -335,9 +338,9 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
 
         setMessages((prev) => [...prev, assistantMessage]);
 
-        // Save assistant message to database
+        // Save assistant message to database (with generatedHtml for preview buttons)
         if (projectId) {
-          await saveChat(projectId, "assistant", assistantContent, modelToUse);
+          await saveChat(projectId, "assistant", assistantContent, modelToUse, result || undefined);
         }
 
         if (result) {
@@ -744,9 +747,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
 
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Save assistant message to database
+    // Save assistant message to database (with generatedHtml for preview buttons)
     if (projectId) {
-      await saveChat(projectId, "assistant", assistantContent, selectedModel);
+      await saveChat(projectId, "assistant", assistantContent, selectedModel, result || undefined);
     }
 
     // Update the canvas with generated HTML
@@ -766,7 +769,14 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
     }
   };
 
-  const handlePromptBuilderGenerate = async (builderPrompt: string) => {
+  const handlePromptBuilderGenerate = (builderPrompt: string) => {
+    // Just set the prompt in the input, don't execute
+    setPrompt(builderPrompt);
+    setShowPromptBuilder(false);
+  };
+
+  // Keep the old function for reference but renamed - can be removed later
+  const handlePromptBuilderGenerateAndExecute = async (builderPrompt: string) => {
     setShowPromptBuilder(false);
     setStreamingContent(""); // Reset streaming content
     setIsStreaming(true, "landing"); // Enable real-time preview - prompt builder generates landing pages
@@ -820,9 +830,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
 
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Save assistant message to database
+    // Save assistant message to database (with generatedHtml for preview buttons)
     if (projectId) {
-      await saveChat(projectId, "assistant", assistantContent, selectedModel);
+      await saveChat(projectId, "assistant", assistantContent, selectedModel, result || undefined);
     }
 
     if (result) {
@@ -842,17 +852,13 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
   };
 
   const handleViewCode = (html: string) => {
-    // Copy to clipboard
-    navigator.clipboard.writeText(html);
+    // Switch to code view mode
+    setViewMode("code");
   };
 
   const handleViewPreview = () => {
-    // Scroll to and focus the preview iframe
-    const iframe = document.querySelector('iframe[title^="Preview"]') as HTMLIFrameElement;
-    if (iframe) {
-      iframe.scrollIntoView({ behavior: "smooth", block: "center" });
-      iframe.focus();
-    }
+    // Switch to preview mode
+    setViewMode("preview");
   };
 
   const handleRegenerate = async (originalPrompt: string) => {
@@ -888,9 +894,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
 
       setMessages((prev) => [...prev, regenerateMessage]);
 
-      // Save assistant message to database
+      // Save assistant message to database (with generatedHtml for preview buttons)
       if (projectId) {
-        await saveChat(projectId, "assistant", regenerateContent, selectedModel);
+        await saveChat(projectId, "assistant", regenerateContent, selectedModel, result || undefined);
       }
     }
   };
@@ -1221,7 +1227,10 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
 
       {/* Prompt Builder Modal */}
       {showPromptBuilder && (
-        <PromptBuilder onGenerate={handlePromptBuilderGenerate} />
+        <PromptBuilder
+          onGenerate={handlePromptBuilderGenerate}
+          onClose={() => setShowPromptBuilder(false)}
+        />
       )}
 
       {/* Code Snippets Modal */}

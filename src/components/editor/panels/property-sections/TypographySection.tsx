@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import { Type, AlignLeft, AlignCenter, AlignRight, AlignJustify } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { NumberInput } from "@/components/ui/number-input";
 import { PropertyRow, PropertyGrid } from "@/components/ui/property-row";
+import { AdvancedColorPicker } from "@/components/ui/advanced-color-picker";
 import { cn } from "@/lib/utils";
-import { colorToHex } from "@/lib/color-utils";
 
 interface TypographySectionProps {
   fontFamily: string;
@@ -87,10 +87,42 @@ export function TypographySection({
     return isNaN(num) ? "" : num;
   };
 
-  // Convert color to HEX for the color input
-  const hexColor = useMemo(() => {
-    return colorToHex(color, "#000000");
-  }, [color]);
+  // Handle color change - for gradients, we need to apply text gradient technique
+  const handleColorChange = useCallback((newColor: string) => {
+    // Check if it's a gradient (linear, radial, or conic)
+    const isGradient = newColor.includes("gradient");
+
+    if (isGradient) {
+      // For text gradients, we pass a special marker that the right-panel will handle
+      // The right-panel's applyLiveStyleToCanvas will apply the background-clip technique
+      onTypographyChange("color", newColor);
+    } else {
+      // Solid color - apply directly
+      onTypographyChange("color", newColor);
+    }
+  }, [onTypographyChange]);
+
+  // Find the matching font value from the list, or return the raw fontFamily
+  // This handles cases where fontFamily is just the name (e.g., "Playfair Display")
+  // but the select options have full values (e.g., "'Playfair Display', serif")
+  const normalizedFontFamily = useMemo(() => {
+    if (!fontFamily) return "";
+
+    // Check if the fontFamily already matches a value in the list
+    const exactMatch = fontFamilies.find(f => f.value === fontFamily);
+    if (exactMatch) return exactMatch.value;
+
+    // Check if the fontFamily matches a name in the list
+    const nameMatch = fontFamilies.find(f =>
+      f.name.toLowerCase() === fontFamily.toLowerCase() ||
+      f.name.toLowerCase().includes(fontFamily.toLowerCase()) ||
+      fontFamily.toLowerCase().includes(f.name.toLowerCase())
+    );
+    if (nameMatch) return nameMatch.value;
+
+    // Return the original value (will show as "current" option)
+    return fontFamily;
+  }, [fontFamily]);
 
   const alignments = [
     { icon: AlignLeft, value: "left" },
@@ -105,10 +137,15 @@ export function TypographySection({
         {/* Font Family */}
         <PropertyRow label="Font Family" isActive={activeProperties.fontFamily}>
           <select
-            value={fontFamily || "Inter, sans-serif"}
+            value={normalizedFontFamily}
             onChange={(e) => onTypographyChange("fontFamily", e.target.value)}
             className="h-8 w-full rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring [&>optgroup]:bg-background [&>optgroup]:text-foreground [&>option]:bg-background [&>option]:text-foreground"
           >
+            {/* Show current font if it's not in the list */}
+            {normalizedFontFamily && !fontFamilies.some(f => f.value === normalizedFontFamily) && (
+              <option value={normalizedFontFamily}>{fontFamily} (current)</option>
+            )}
+            <option value="">Inherited</option>
             <optgroup label="Sans-serif (Modern)">
               {fontFamilies.slice(0, 14).map((font) => (
                 <option key={font.value} value={font.value}>
@@ -217,23 +254,13 @@ export function TypographySection({
           </div>
         </PropertyRow>
 
-        {/* Text Color */}
+        {/* Text Color - Advanced color picker with gradient support */}
         <PropertyRow label="Color" isActive={activeProperties.color}>
-          <div className="flex gap-2">
-            <input
-              type="color"
-              value={hexColor}
-              onChange={(e) => onTypographyChange("color", e.target.value)}
-              className="h-8 w-8 cursor-pointer rounded border bg-transparent"
-            />
-            <input
-              type="text"
-              value={color || ""}
-              onChange={(e) => onTypographyChange("color", e.target.value)}
-              placeholder="#000000"
-              className="h-8 flex-1 rounded-md border bg-transparent px-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-            />
-          </div>
+          <AdvancedColorPicker
+            value={color || "#000000"}
+            onChange={handleColorChange}
+            supportGradients={true}
+          />
         </PropertyRow>
       </div>
     </CollapsibleSection>

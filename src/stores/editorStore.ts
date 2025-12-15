@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { ViewMode, DeviceMode, ElementNode, Page, BackgroundAsset } from "@/types";
+import type { ViewMode, DeviceMode, ElementNode, Page, BackgroundAsset, FontConfig } from "@/types";
 import { getPreviewIframe } from "@/lib/utils";
 
 // Selected element data interface
@@ -58,6 +58,10 @@ interface EditorState {
   // Background Assets
   backgroundAssets: BackgroundAsset[];
 
+  // Font Configuration
+  fontConfig: FontConfig | null;
+  selectedFonts: string[];
+
   // Panels
   showLayersPanel: boolean;
 
@@ -95,6 +99,12 @@ interface EditorState {
   setShowLayersPanel: (show: boolean) => void;
   toggleLayersPanel: () => void;
 
+  // Font Actions
+  setFontConfig: (config: FontConfig) => void;
+  setSelectedFonts: (fonts: string[]) => void;
+  addSelectedFont: (font: string) => void;
+  removeSelectedFont: (font: string) => void;
+
   // Sync Actions
   syncHtmlFromIframe: () => void;
   addToHistory: (html: string) => void;
@@ -123,6 +133,8 @@ const initialState = {
   insertAfterElementId: null as string | null,
   insertAfterElementHtml: null as string | null,
   backgroundAssets: [] as BackgroundAsset[],
+  fontConfig: null as FontConfig | null,
+  selectedFonts: [] as string[],
   showLayersPanel: false,
 };
 
@@ -334,6 +346,29 @@ export const useEditorStore = create<EditorState>()(
         if (willOpen) {
           state.viewMode = "design";
         }
+      }),
+
+    // Font Actions
+    setFontConfig: (config) =>
+      set((state) => {
+        state.fontConfig = config;
+      }),
+
+    setSelectedFonts: (fonts) =>
+      set((state) => {
+        state.selectedFonts = fonts;
+      }),
+
+    addSelectedFont: (font) =>
+      set((state) => {
+        if (!state.selectedFonts.includes(font)) {
+          state.selectedFonts.push(font);
+        }
+      }),
+
+    removeSelectedFont: (font) =>
+      set((state) => {
+        state.selectedFonts = state.selectedFonts.filter((f) => f !== font);
       }),
 
     // Sync HTML from iframe to store (used when switching away from design mode)

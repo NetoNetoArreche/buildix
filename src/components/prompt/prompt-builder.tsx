@@ -914,9 +914,19 @@ export function PromptBuilder({ onGenerate, onClose }: PromptBuilderProps) {
       headingFont,
       bodyFont,
       headingSize,
+      subheadingSize,
+      bodyTextSize,
       headingWeight,
       letterSpacing,
       animation,
+      // New animation system parameters
+      animationType,
+      animationScene,
+      animationDuration,
+      animationDelay,
+      animationTiming,
+      animationIterations,
+      animationDirection,
       additionalInstructions,
     });
 

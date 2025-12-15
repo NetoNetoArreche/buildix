@@ -19,7 +19,7 @@ import { useCanvasModeStore } from "@/stores/canvasModeStore";
 import { useProject } from "@/hooks/useProject";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
-import type { BackgroundAsset } from "@/types";
+import type { BackgroundAsset, FontConfig } from "@/types";
 
 export default function EditorPage() {
   const params = useParams();
@@ -44,6 +44,78 @@ export default function EditorPage() {
     },
     [addBackgroundAsset]
   );
+
+  // Handle applying font configuration from Font Panel
+  const handleApplyFont = useCallback((config: FontConfig) => {
+    const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
+    if (!iframe?.contentDocument || !iframe?.contentWindow) {
+      console.error("[EditorPage] Could not find iframe for font application");
+      return;
+    }
+
+    const doc = iframe.contentDocument;
+    const iframeWindow = iframe.contentWindow;
+
+    // Inject Google Fonts as @import in a style tag (persists in HTML)
+    const fontsToLoad = [config.headingFont, config.bodyFont].filter(
+      (font, index, arr) => arr.indexOf(font) === index // unique fonts
+    );
+
+    // Check if we already have a font style tag
+    let fontStyleTag = doc.getElementById("buildix-font-imports") as HTMLStyleElement;
+    if (!fontStyleTag) {
+      fontStyleTag = doc.createElement("style");
+      fontStyleTag.id = "buildix-font-imports";
+      doc.head.appendChild(fontStyleTag);
+    }
+
+    // Build @import rules for all fonts
+    const importRules = fontsToLoad.map((fontName) => {
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@300;400;500;600;700;800&display=swap`;
+      return `@import url('${fontUrl}');`;
+    }).join("\n");
+
+    fontStyleTag.textContent = importRules;
+
+    // Apply heading font to all heading elements and large text
+    const headingSelectors = "h1, h2, h3, h4, h5, h6";
+    doc.querySelectorAll(headingSelectors).forEach((el) => {
+      const element = el as HTMLElement;
+      element.style.fontFamily = `'${config.headingFont}', sans-serif`;
+      element.style.fontWeight = config.headingWeight;
+      element.style.letterSpacing = config.headingSpacing;
+    });
+
+    // Apply body font to body and common text elements
+    doc.body.style.fontFamily = `'${config.bodyFont}', sans-serif`;
+    doc.body.style.fontWeight = config.bodyWeight;
+    doc.body.style.letterSpacing = config.bodySpacing;
+
+    // Also apply to paragraphs, spans, divs with text, links, etc.
+    const bodySelectors = "p, span, div, a, li, td, th, label, button";
+    doc.querySelectorAll(bodySelectors).forEach((el) => {
+      const element = el as HTMLElement;
+      // Use iframe's window for getComputedStyle (FIXED BUG)
+      const computedFontSize = iframeWindow.getComputedStyle(element).fontSize || "16px";
+      const fontSize = parseFloat(computedFontSize);
+
+      // Apply body font to elements with font size <= 24px (not headings)
+      if (fontSize <= 24) {
+        element.style.fontFamily = `'${config.bodyFont}', sans-serif`;
+        element.style.fontWeight = config.bodyWeight;
+        element.style.letterSpacing = config.bodySpacing;
+      }
+    });
+
+    console.log("[EditorPage] Applied font configuration:", config);
+
+    // Sync HTML from iframe to store (persists the changes)
+    setTimeout(() => {
+      const { syncHtmlFromIframe } = useEditorStore.getState();
+      syncHtmlFromIframe();
+      console.log("[EditorPage] Synced HTML after font application");
+    }, 100);
+  }, []);
 
   // Auto-save background assets when they change
   useEffect(() => {
@@ -312,7 +384,11 @@ export default function EditorPage() {
 
       {/* Font Selection Panel */}
       {activeModal === "fonts" && (
-        <FontPanel onClose={closeModal} />
+        <FontPanel
+          onClose={closeModal}
+          onApplyFont={handleApplyFont}
+          currentHtml={htmlContent}
+        />
       )}
 
       {/* Figma Import Modal */}

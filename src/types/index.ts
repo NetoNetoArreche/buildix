@@ -38,6 +38,16 @@ export interface FontSettings {
   importedFonts: string[];
 }
 
+// Font Configuration for Font Selection Panel
+export interface FontConfig {
+  headingFont: string;
+  bodyFont: string;
+  headingWeight: string;
+  bodyWeight: string;
+  headingSpacing: string;
+  bodySpacing: string;
+}
+
 export interface ColorSettings {
   mode: "light" | "dark";
   accentColor: string;

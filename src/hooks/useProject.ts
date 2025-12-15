@@ -23,7 +23,7 @@ interface UseProjectReturn {
   createPage: (projectId: string, name: string, slug?: string) => Promise<Page | null>;
   deletePage: (projectId: string, pageId: string) => Promise<boolean>;
   savePage: (projectId: string, pageId: string, htmlContent: string, cssContent?: string, backgroundAssets?: BackgroundAsset[], canvasSettings?: CanvasSettings) => Promise<Page | null>;
-  saveChat: (projectId: string, role: string, content: string, model?: string) => Promise<ChatMessageType | null>;
+  saveChat: (projectId: string, role: string, content: string, model?: string, generatedHtml?: string) => Promise<ChatMessageType | null>;
 }
 
 export function useProject(): UseProjectReturn {
@@ -316,13 +316,14 @@ export function useProject(): UseProjectReturn {
     projectId: string,
     role: string,
     content: string,
-    model?: string
+    model?: string,
+    generatedHtml?: string
   ): Promise<ChatMessageType | null> => {
     try {
       const response = await fetch(`/api/projects/${projectId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, content, model }),
+        body: JSON.stringify({ role, content, model, generatedHtml }),
       });
 
       if (!response.ok) {

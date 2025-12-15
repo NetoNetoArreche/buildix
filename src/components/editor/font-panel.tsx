@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import {
   X,
   Type,
@@ -20,20 +20,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useEditorStore } from "@/stores/editorStore";
+import type { FontConfig } from "@/types";
 
 interface FontPanelProps {
   onClose: () => void;
   onApplyFont?: (config: FontConfig) => void;
   currentHtml?: string;
-}
-
-interface FontConfig {
-  headingFont: string;
-  bodyFont: string;
-  headingWeight: string;
-  bodyWeight: string;
-  headingSpacing: string;
-  bodySpacing: string;
 }
 
 // Available fonts
@@ -100,33 +93,135 @@ const LETTER_SPACINGS = [
   { value: "0.1em", label: "Widest" },
 ];
 
+// Default fonts to show when no fonts are selected
+const DEFAULT_FONTS = ["Inter", "Geist", "Manrope", "Poppins", "Playfair Display"];
+
 export function FontPanel({ onClose, onApplyFont, currentHtml }: FontPanelProps) {
+  // Get persisted state from store
+  const {
+    fontConfig: storedFontConfig,
+    selectedFonts: storedSelectedFonts,
+    setFontConfig,
+    setSelectedFonts: setStoredSelectedFonts,
+  } = useEditorStore();
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFonts, setSelectedFonts] = useState<string[]>([
-    "Inter",
-    "Geist",
-    "Manrope",
-    "Poppins",
-    "Playfair Display",
-  ]);
-  const [headingFont, setHeadingFont] = useState("Inter");
-  const [bodyFont, setBodyFont] = useState("Inter");
-  const [headingWeight, setHeadingWeight] = useState("600");
-  const [bodyWeight, setBodyWeight] = useState("400");
-  const [headingSpacing, setHeadingSpacing] = useState("-0.025em");
-  const [bodySpacing, setBodySpacing] = useState("0");
   const [activeTab, setActiveTab] = useState<"fonts" | "pairings" | "settings">("fonts");
 
-  // Detected font styles from current HTML (mock data for now)
-  const detectedStyles = useMemo(() => [
-    { size: "60px", weight: "600", font: "Inter", usage: 4 },
-    { size: "48px", weight: "500", font: "Inter", usage: 1 },
-    { size: "30px", weight: "600", font: "Inter", usage: 1 },
-    { size: "20px", weight: "500", font: "Inter", usage: 6 },
-    { size: "16px", weight: "400", font: "Inter", usage: 15 },
-    { size: "14px", weight: "400", font: "Inter", usage: 30 },
-    { size: "14px", weight: "500", font: "Inter", usage: 11 },
-  ], []);
+  // Track if we've already initialized from detected fonts
+  const hasInitializedRef = useRef(false);
+
+  // Local state initialized from store (or defaults)
+  const [selectedFonts, setSelectedFonts] = useState<string[]>(() => {
+    if (storedSelectedFonts && storedSelectedFonts.length > 0) {
+      return storedSelectedFonts;
+    }
+    return DEFAULT_FONTS;
+  });
+
+  const [headingFont, setHeadingFont] = useState(() => storedFontConfig?.headingFont || "Inter");
+  const [bodyFont, setBodyFont] = useState(() => storedFontConfig?.bodyFont || "Inter");
+  const [headingWeight, setHeadingWeight] = useState(() => storedFontConfig?.headingWeight || "600");
+  const [bodyWeight, setBodyWeight] = useState(() => storedFontConfig?.bodyWeight || "400");
+  const [headingSpacing, setHeadingSpacing] = useState(() => storedFontConfig?.headingSpacing || "-0.025em");
+  const [bodySpacing, setBodySpacing] = useState(() => storedFontConfig?.bodySpacing || "0");
+
+  // Track modified weights for detected styles (key: "size-originalWeight-font", value: newWeight)
+  const [modifiedWeights, setModifiedWeights] = useState<Record<string, string>>({});
+
+  // Detect font styles from current HTML using iframe
+  const detectedStyles = useMemo(() => {
+    // Access the iframe to get computed styles
+    const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
+    if (!iframe?.contentDocument) {
+      return [];
+    }
+
+    const doc = iframe.contentDocument;
+    const styleMap = new Map<string, { size: string; weight: string; font: string; usage: number }>();
+
+    // Get all text elements
+    const textElements = doc.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, div, a, li, button, label");
+
+    textElements.forEach((el) => {
+      const element = el as HTMLElement;
+      // Skip empty elements
+      if (!element.textContent?.trim()) return;
+
+      const computed = iframe.contentWindow?.getComputedStyle(element);
+      if (!computed) return;
+
+      const fontSize = computed.fontSize;
+      const fontWeight = computed.fontWeight;
+      const fontFamily = computed.fontFamily;
+
+      // Extract primary font name (remove quotes and fallbacks)
+      const fonts = fontFamily.split(",").map(f => f.trim().replace(/^['"]|['"]$/g, ""));
+      const genericFonts = ["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui"];
+      const primaryFont = fonts.find(f => !genericFonts.includes(f.toLowerCase())) || fonts[0] || "Unknown";
+
+      const key = `${fontSize}-${fontWeight}-${primaryFont}`;
+
+      if (styleMap.has(key)) {
+        const existing = styleMap.get(key)!;
+        existing.usage += 1;
+      } else {
+        styleMap.set(key, {
+          size: fontSize,
+          weight: fontWeight,
+          font: primaryFont,
+          usage: 1,
+        });
+      }
+    });
+
+    // Convert to array and sort by usage (most used first)
+    return Array.from(styleMap.values())
+      .sort((a, b) => b.usage - a.usage)
+      .slice(0, 10); // Limit to top 10 styles
+  }, [currentHtml]); // Re-run when HTML changes
+
+  // Extract fonts used in the current design
+  const detectedFonts = useMemo(() => {
+    const fonts = new Set<string>();
+    detectedStyles.forEach((style) => {
+      if (style.font && style.font !== "Unknown") {
+        fonts.add(style.font);
+      }
+    });
+    return Array.from(fonts);
+  }, [detectedStyles]);
+
+  // Initialize ONLY if no stored config exists (first time opening)
+  useEffect(() => {
+    // Skip if we already have stored config or already initialized
+    if (storedFontConfig || hasInitializedRef.current) {
+      return;
+    }
+
+    if (detectedFonts.length > 0) {
+      hasInitializedRef.current = true;
+
+      // Add detected fonts to selection
+      setSelectedFonts((prev) => {
+        const newFonts = new Set([...prev, ...detectedFonts]);
+        return Array.from(newFonts);
+      });
+
+      // Set initial heading/body fonts based on detected styles
+      const headingStyle = detectedStyles.find((s) => parseFloat(s.size) >= 24);
+      const bodyStyle = detectedStyles.find((s) => parseFloat(s.size) < 20);
+
+      if (headingStyle && headingStyle.font !== "Unknown") {
+        setHeadingFont(headingStyle.font);
+        setHeadingWeight(headingStyle.weight);
+      }
+      if (bodyStyle && bodyStyle.font !== "Unknown") {
+        setBodyFont(bodyStyle.font);
+        setBodyWeight(bodyStyle.weight);
+      }
+    }
+  }, [detectedFonts, detectedStyles, storedFontConfig]);
 
   const filteredFonts = useMemo(() => {
     if (!searchQuery) return AVAILABLE_FONTS;
@@ -155,23 +250,84 @@ export function FontPanel({ onClose, onApplyFont, currentHtml }: FontPanelProps)
   }, [selectedFonts]);
 
   const handleApply = useCallback(() => {
+    const config: FontConfig = {
+      headingFont,
+      bodyFont,
+      headingWeight,
+      bodyWeight,
+      headingSpacing,
+      bodySpacing,
+    };
+
+    // Save to store for persistence
+    setFontConfig(config);
+    setStoredSelectedFonts(selectedFonts);
+
+    // Apply to canvas (this applies Heading/Body font settings)
     if (onApplyFont) {
-      onApplyFont({
-        headingFont,
-        bodyFont,
-        headingWeight,
-        bodyWeight,
-        headingSpacing,
-        bodySpacing,
-      });
+      onApplyFont(config);
     }
+
+    // Sync any Detected Font Styles changes that were made via weight buttons
+    // This ensures all DOM changes are persisted to the HTML store
+    if (Object.keys(modifiedWeights).length > 0) {
+      // Small delay to ensure onApplyFont completes first
+      setTimeout(() => {
+        const { syncHtmlFromIframe } = useEditorStore.getState();
+        syncHtmlFromIframe();
+        console.log("[FontPanel] Synced detected style changes to store");
+      }, 150);
+    }
+
     onClose();
-  }, [onApplyFont, onClose, headingFont, bodyFont, headingWeight, bodyWeight, headingSpacing, bodySpacing]);
+  }, [onApplyFont, onClose, headingFont, bodyFont, headingWeight, bodyWeight, headingSpacing, bodySpacing, selectedFonts, setFontConfig, setStoredSelectedFonts, modifiedWeights]);
 
   const removeUnusedFonts = useCallback(() => {
     // Keep only the fonts that are being used (heading and body)
     setSelectedFonts([headingFont, bodyFont].filter((f, i, arr) => arr.indexOf(f) === i));
   }, [headingFont, bodyFont]);
+
+  // Change weight for a specific detected style (affects all elements matching that style)
+  const changeDetectedStyleWeight = useCallback((style: { size: string; weight: string; font: string }, newWeight: string) => {
+    const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
+    if (!iframe?.contentDocument || !iframe?.contentWindow) {
+      console.error("[FontPanel] Could not find iframe for weight change");
+      return;
+    }
+
+    const doc = iframe.contentDocument;
+    const iframeWindow = iframe.contentWindow;
+
+    // Get all text elements
+    const textElements = doc.querySelectorAll("h1, h2, h3, h4, h5, h6, p, span, div, a, li, button, label");
+    let changedCount = 0;
+
+    textElements.forEach((el) => {
+      const element = el as HTMLElement;
+      if (!element.textContent?.trim()) return;
+
+      const computed = iframeWindow.getComputedStyle(element);
+      const fontSize = computed.fontSize;
+      const fontWeight = computed.fontWeight;
+      const fontFamily = computed.fontFamily;
+
+      // Extract primary font name
+      const fonts = fontFamily.split(",").map(f => f.trim().replace(/^['"]|['"]$/g, ""));
+      const genericFonts = ["serif", "sans-serif", "monospace", "cursive", "fantasy", "system-ui"];
+      const primaryFont = fonts.find(f => !genericFonts.includes(f.toLowerCase())) || fonts[0] || "Unknown";
+
+      // Check if this element matches the style we want to change
+      if (fontSize === style.size && fontWeight === style.weight && primaryFont === style.font) {
+        element.style.fontWeight = newWeight;
+        changedCount++;
+      }
+    });
+
+    console.log(`[FontPanel] Changed weight from ${style.weight} to ${newWeight} for ${changedCount} elements`);
+
+    // NOTE: Don't sync HTML here - wait until user clicks "Apply Changes"
+    // Syncing after each click causes the iframe to reload, losing the styleKey mapping
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
@@ -508,37 +664,59 @@ export function FontPanel({ onClose, onApplyFont, currentHtml }: FontPanelProps)
               {/* Detected Font Styles */}
               <div>
                 <h3 className="text-sm font-medium text-zinc-300 mb-3">Detected Font Styles</h3>
+                <p className="text-xs text-zinc-500 mb-3">Click a weight to change all matching elements</p>
                 <div className="space-y-2">
-                  {detectedStyles.map((style, index) => (
-                    <div
-                      key={index}
-                      className="rounded-xl border border-zinc-800 bg-zinc-800/20 p-3"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-zinc-200">
-                          {style.size} - {style.weight}
-                        </span>
-                        <span className="text-[10px] text-zinc-500">
-                          {style.font} - Used {style.usage} times
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {FONT_WEIGHTS.map((weight) => (
-                          <button
-                            key={weight.value}
-                            className={cn(
-                              "px-2 py-1 rounded text-[10px] font-medium transition-all",
-                              style.weight === weight.value
-                                ? "bg-violet-500/20 text-violet-300"
-                                : "bg-zinc-800/50 text-zinc-500"
+                  {detectedStyles.map((style, index) => {
+                    const styleKey = `${style.size}-${style.weight}-${style.font}`;
+                    const currentWeight = modifiedWeights[styleKey] || style.weight;
+
+                    return (
+                      <div
+                        key={index}
+                        className="rounded-xl border border-zinc-800 bg-zinc-800/20 p-3"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-zinc-200">
+                            {style.size} - {currentWeight !== style.weight ? (
+                              <span className="text-violet-400">{currentWeight}</span>
+                            ) : (
+                              style.weight
                             )}
-                          >
-                            {weight.label}
-                          </button>
-                        ))}
+                          </span>
+                          <span className="text-[10px] text-zinc-500">
+                            {style.font} - Used {style.usage} times
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {FONT_WEIGHTS.map((weight) => (
+                            <button
+                              key={weight.value}
+                              onClick={() => {
+                                // Update local state
+                                setModifiedWeights(prev => ({
+                                  ...prev,
+                                  [styleKey]: weight.value
+                                }));
+                                // Apply to iframe
+                                changeDetectedStyleWeight(
+                                  { ...style, weight: currentWeight }, // Use current weight to find elements
+                                  weight.value
+                                );
+                              }}
+                              className={cn(
+                                "px-2 py-1 rounded text-[10px] font-medium transition-all cursor-pointer hover:bg-violet-500/30",
+                                currentWeight === weight.value
+                                  ? "bg-violet-500/20 text-violet-300 border border-violet-500/50"
+                                  : "bg-zinc-800/50 text-zinc-500 border border-transparent hover:text-zinc-300"
+                              )}
+                            >
+                              {weight.label}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
