@@ -36,8 +36,89 @@ import {
   ArrowRightLeft,
   Trash2,
 } from "lucide-react";
-import { toPng, toBlob, getFontEmbedCSS } from "html-to-image";
+import { toPng, toBlob } from "html-to-image";
 import JSZip from "jszip";
+
+// Helper function to fetch Google Font CSS and convert fonts to base64
+async function fetchGoogleFontsAsBase64(fontNames: string[]): Promise<string> {
+  const fontCSS: string[] = [];
+
+  for (const fontName of fontNames) {
+    try {
+      // Fetch the CSS from Google Fonts
+      const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@300;400;500;600;700;800&display=swap`;
+
+      const response = await fetch(fontUrl, {
+        headers: {
+          // Request woff2 format by mimicking a modern browser
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+      });
+
+      if (!response.ok) continue;
+
+      let css = await response.text();
+
+      // Find all url() references in the CSS and convert to base64
+      const urlMatches = css.matchAll(/url\((https:\/\/[^)]+)\)/g);
+
+      for (const match of urlMatches) {
+        const fontFileUrl = match[1];
+        try {
+          const fontResponse = await fetch(fontFileUrl);
+          if (fontResponse.ok) {
+            const fontBlob = await fontResponse.blob();
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(fontBlob);
+            });
+            css = css.replace(fontFileUrl, base64);
+          }
+        } catch (fontFileError) {
+          console.warn(`Failed to fetch font file: ${fontFileUrl}`, fontFileError);
+        }
+      }
+
+      fontCSS.push(css);
+    } catch (error) {
+      console.warn(`Failed to fetch font: ${fontName}`, error);
+    }
+  }
+
+  return fontCSS.join('\n');
+}
+
+// Extract font names used in the iframe
+function extractFontNamesFromIframe(iframeDoc: Document): string[] {
+  const fontNames = new Set<string>();
+
+  // Check style tag with Google Fonts imports
+  const fontStyleTag = iframeDoc.getElementById("buildix-font-imports");
+  if (fontStyleTag) {
+    const importMatches = fontStyleTag.textContent?.matchAll(/family=([^:&]+)/g);
+    if (importMatches) {
+      for (const match of importMatches) {
+        fontNames.add(match[1].replace(/\+/g, ' '));
+      }
+    }
+  }
+
+  // Also check computed styles on elements
+  const elements = iframeDoc.querySelectorAll('*');
+  elements.forEach((el) => {
+    const style = (el as HTMLElement).style;
+    if (style.fontFamily) {
+      // Extract font name from font-family (e.g., "'Playfair Display', serif" -> "Playfair Display")
+      const match = style.fontFamily.match(/['"]?([^'",]+)['"]?/);
+      if (match && match[1] && !['sans-serif', 'serif', 'monospace', 'cursive', 'fantasy'].includes(match[1].toLowerCase())) {
+        fontNames.add(match[1]);
+      }
+    }
+  });
+
+  return Array.from(fontNames);
+}
 import { Button } from "@/components/ui/button";
 import { injectBackgroundAssets } from "@/lib/background-assets";
 import { Separator } from "@/components/ui/separator";
@@ -185,18 +266,25 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       }
 
       const iframeWindow = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
 
       // Aguardar carregamento de todas as fontes no iframe
       if (iframeWindow?.document?.fonts) {
         await iframeWindow.document.fonts.ready;
       }
 
-      // Pré-computar CSS das fontes embarcadas
+      // Extrair nomes das fontes usadas no iframe e buscar como base64
+      const fontNames = extractFontNamesFromIframe(iframeDoc);
+      console.log("[Export] Fonts detected:", fontNames);
+
       let fontEmbedCSS: string | undefined;
-      try {
-        fontEmbedCSS = await getFontEmbedCSS(container);
-      } catch (fontError) {
-        console.warn("Não foi possível embarcar fontes:", fontError);
+      if (fontNames.length > 0) {
+        try {
+          fontEmbedCSS = await fetchGoogleFontsAsBase64(fontNames);
+          console.log("[Export] Font CSS generated, length:", fontEmbedCSS?.length);
+        } catch (fontError) {
+          console.warn("Não foi possível embarcar fontes:", fontError);
+        }
       }
 
       // Use html-to-image to convert to PNG
@@ -253,19 +341,25 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       const zip = new JSZip();
       let failedSlides = 0;
       const iframeWindow = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
 
       // 1. Aguardar carregamento de todas as fontes no iframe
       if (iframeWindow?.document?.fonts) {
         await iframeWindow.document.fonts.ready;
       }
 
-      // 2. Pré-computar CSS das fontes embarcadas (uma vez para todos os slides)
-      const firstSlide = slides[0] as HTMLElement;
+      // 2. Extrair nomes das fontes usadas no iframe e buscar como base64
+      const fontNames = extractFontNamesFromIframe(iframeDoc);
+      console.log("[Export] Fonts detected:", fontNames);
+
       let fontEmbedCSS: string | undefined;
-      try {
-        fontEmbedCSS = await getFontEmbedCSS(firstSlide);
-      } catch (fontError) {
-        console.warn("Não foi possível embarcar fontes:", fontError);
+      if (fontNames.length > 0) {
+        try {
+          fontEmbedCSS = await fetchGoogleFontsAsBase64(fontNames);
+          console.log("[Export] Font CSS generated, length:", fontEmbedCSS?.length);
+        } catch (fontError) {
+          console.warn("Não foi possível embarcar fontes:", fontError);
+        }
       }
 
       for (let i = 0; i < slides.length; i++) {
