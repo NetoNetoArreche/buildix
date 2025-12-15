@@ -421,6 +421,25 @@ export const useEditorStore = create<EditorState>()(
       // Remove buildix style from head too
       htmlEl.querySelectorAll("#buildix-selection-styles").forEach((el) => el.remove());
 
+      // Remove duplicate/tripled Tailwind CDN styles to prevent HTML bloat
+      // The Tailwind CDN script will regenerate these styles when loaded
+      // This is critical to prevent "Unknown error" when sending large HTML to AI APIs
+      const allStyles = htmlEl.querySelectorAll('style');
+      let foundFirstTailwind = false;
+      allStyles.forEach((style) => {
+        const content = style.textContent || '';
+        // Check for Tailwind CDN generated styles
+        if (content.includes('tailwindcss') || content.includes('--tw-border-spacing') || content.includes('--tw-ring-offset-shadow')) {
+          if (foundFirstTailwind) {
+            // Remove duplicate Tailwind styles
+            style.remove();
+            console.log("[EditorStore] Removed duplicate Tailwind style tag");
+          } else {
+            foundFirstTailwind = true;
+          }
+        }
+      });
+
       const newHtml = "<!DOCTYPE html>\n" + htmlEl.outerHTML;
 
       console.log("[EditorStore] Updating htmlContent, length:", newHtml.length);
