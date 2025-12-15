@@ -5,10 +5,62 @@ import { SYSTEM_PROMPTS } from "@/lib/ai/prompts";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
+/**
+ * Clean HTML by removing duplicate/tripled Tailwind CDN generated styles
+ * The Tailwind CDN dynamically injects <style> tags which accumulate over time
+ * This can cause HTML to exceed 150k+ characters and fail AI API context limits
+ */
+function cleanHtmlForAI(html: string): string {
+  if (!html) return html;
+
+  // Match all style tags with their content
+  const styleTagRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  const matches = [...html.matchAll(styleTagRegex)];
+
+  let foundFirstTailwind = false;
+  let cleanedHtml = html;
+
+  // Process in reverse order to maintain correct positions when removing
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const match = matches[i];
+    const content = match[1] || '';
+
+    // Check if this is a Tailwind CDN generated style
+    const isTailwindStyle = content.includes('tailwindcss') ||
+                           content.includes('--tw-border-spacing') ||
+                           content.includes('--tw-ring-offset-shadow') ||
+                           content.includes('--tw-translate-x');
+
+    if (isTailwindStyle) {
+      if (foundFirstTailwind) {
+        // Remove duplicate Tailwind style tags
+        cleanedHtml = cleanedHtml.slice(0, match.index!) + cleanedHtml.slice(match.index! + match[0].length);
+        console.log("[Stream API] Removed duplicate Tailwind style tag");
+      } else {
+        foundFirstTailwind = true;
+      }
+    }
+  }
+
+  const reduction = html.length - cleanedHtml.length;
+  if (reduction > 0) {
+    console.log(`[Stream API] Cleaned HTML: removed ${reduction} characters (${Math.round(reduction/1024)}KB)`);
+  }
+
+  return cleanedHtml;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { prompt, model = "gemini", type = "generation", referenceImage } = body;
+
+    // Clean currentHtml to remove duplicate Tailwind styles before sending to AI
+    if (body.currentHtml) {
+      const originalLength = body.currentHtml.length;
+      body.currentHtml = cleanHtmlForAI(body.currentHtml);
+      console.log(`[Stream API] HTML length: ${originalLength} -> ${body.currentHtml.length}`);
+    }
 
     if (!prompt) {
       return new Response(

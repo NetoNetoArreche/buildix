@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Copy, Check, RefreshCw, Maximize2, Minimize2 } from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Copy, Check, RefreshCw, Maximize2, Minimize2, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -10,14 +10,79 @@ import {
 } from "@/components/ui/tooltip";
 import { useEditorStore } from "@/stores/editorStore";
 import { cn } from "@/lib/utils";
+import Editor from "@monaco-editor/react";
+import { useTheme } from "next-themes";
 
 export function CodeEditor() {
   const { htmlContent, setHtmlContent } = useEditorStore();
   const [code, setCode] = useState(htmlContent);
   const [copied, setCopied] = useState(false);
   const [splitView, setSplitView] = useState(true);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editorWidth, setEditorWidth] = useState(50); // percentage
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const rafRef = useRef<number | null>(null);
+  const { theme } = useTheme();
+
+  // Handle resize drag with requestAnimationFrame for smooth performance
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+
+    // Cancel any pending animation frame
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    // Use requestAnimationFrame for smooth updates
+    rafRef.current = requestAnimationFrame(() => {
+      if (!containerRef.current) return;
+      const container = containerRef.current;
+      const rect = container.getBoundingClientRect();
+      const newWidth = ((e.clientX - rect.left) / rect.width) * 100;
+
+      // Clamp between 20% and 80%
+      setEditorWidth(Math.min(80, Math.max(20, newWidth)));
+    });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
+  }, []);
+
+  // Add/remove mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
   // Sync code with store
   useEffect(() => {
@@ -67,30 +132,17 @@ export function CodeEditor() {
     }
   };
 
-  // Handle tab key in textarea
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Tab") {
-      e.preventDefault();
-      const textarea = textareaRef.current;
-      if (!textarea) return;
-
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const newValue = code.substring(0, start) + "  " + code.substring(end);
-
-      setCode(newValue);
-
-      // Restore cursor position
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + 2;
-      }, 0);
-    }
-
-    // Apply changes with Cmd+S
-    if (e.key === "s" && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault();
-      handleApply();
-    }
+  // Handle Monaco Editor mount - set up Cmd+S shortcut
+  const handleEditorMount = (editor: unknown) => {
+    const monacoEditor = editor as { addCommand: (keybinding: number, handler: () => void) => void };
+    // Add Cmd/Ctrl+S shortcut to apply changes
+    monacoEditor.addCommand(
+      // KeyMod.CtrlCmd | KeyCode.KeyS
+      2048 | 49, // 2048 = CtrlCmd, 49 = KeyS
+      () => {
+        handleApply();
+      }
+    );
   };
 
   return (
@@ -168,50 +220,87 @@ export function CodeEditor() {
       </div>
 
       {/* Editor and Preview */}
-      <div className={cn("flex flex-1 overflow-hidden", splitView && "divide-x")}>
+      <div
+        ref={containerRef}
+        className="flex flex-1 overflow-hidden"
+      >
         {/* Code Editor */}
-        <div className={cn("flex flex-col", splitView ? "w-1/2" : "w-full")}>
+        <div
+          className="flex flex-col"
+          style={{
+            width: splitView ? `${editorWidth}%` : '100%',
+            willChange: isDragging ? 'width' : 'auto',
+          }}
+        >
           <div className="flex h-8 items-center border-b bg-muted/30 px-3">
             <span className="text-xs text-muted-foreground">index.html</span>
           </div>
-          <div className="relative flex-1 overflow-hidden">
-            {/* Line Numbers */}
-            <div className="absolute left-0 top-0 h-full w-12 select-none border-r bg-muted/30 text-right">
-              <div className="p-3 font-mono text-xs leading-6 text-muted-foreground">
-                {code.split("\n").map((_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
-            </div>
-
-            {/* Code Textarea */}
-            <textarea
-              ref={textareaRef}
+          <div className="flex-1 overflow-hidden">
+            <Editor
+              height="100%"
+              defaultLanguage="html"
               value={code}
-              onChange={(e) => handleCodeChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="absolute inset-0 h-full w-full resize-none bg-background p-3 pl-14 font-mono text-sm leading-6 text-foreground focus:outline-none"
-              spellCheck={false}
-              style={{
+              onChange={(value) => handleCodeChange(value || "")}
+              onMount={handleEditorMount}
+              theme={theme === "dark" ? "vs-dark" : "light"}
+              options={{
+                minimap: { enabled: false },
+                fontSize: 13,
+                lineNumbers: "on",
+                wordWrap: "on",
                 tabSize: 2,
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                padding: { top: 8, bottom: 8 },
+                fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+                fontLigatures: true,
+                renderWhitespace: "selection",
+                bracketPairColorization: { enabled: true },
+                autoClosingBrackets: "always",
+                autoClosingQuotes: "always",
+                formatOnPaste: true,
               }}
             />
           </div>
         </div>
 
+        {/* Resizable Divider */}
+        {splitView && (
+          <div
+            onMouseDown={handleMouseDown}
+            className={cn(
+              "flex w-2 flex-col items-center justify-center border-x bg-muted/30 cursor-col-resize hover:bg-muted/50 transition-colors select-none",
+              isDragging && "bg-primary/20"
+            )}
+            style={{ touchAction: 'none' }}
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
+        )}
+
         {/* Preview */}
         {splitView && (
-          <div className="flex w-1/2 flex-col">
+          <div
+            className="flex flex-col"
+            style={{
+              width: `${100 - editorWidth}%`,
+              willChange: isDragging ? 'width' : 'auto',
+            }}
+          >
             <div className="flex h-8 items-center border-b bg-muted/30 px-3">
               <span className="text-xs text-muted-foreground">Preview</span>
             </div>
-            <div className="flex-1 overflow-auto bg-white">
+            <div className="flex-1 overflow-auto bg-white relative">
               <iframe
                 ref={iframeRef}
                 className="h-full w-full border-0"
                 title="Code Preview"
-                sandbox="allow-scripts"
+                sandbox="allow-scripts allow-same-origin"
               />
+              {/* Overlay to prevent iframe from capturing mouse events during resize */}
+              {isDragging && (
+                <div className="absolute inset-0 bg-transparent" />
+              )}
             </div>
           </div>
         )}

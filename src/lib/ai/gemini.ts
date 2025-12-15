@@ -70,37 +70,47 @@ export async function* streamWithGemini(
   }
 
   // Add text prompt
-  parts.push({ text: `${systemPrompt}\n\nUser Request: ${prompt}` });
+  const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
+  parts.push({ text: fullPrompt });
 
-  const response = await ai.models.generateContentStream({
-    model: "gemini-3-pro-preview",
-    contents: [
-      {
-        role: "user",
-        parts,
+  // Log prompt size for debugging
+  console.log(`[Gemini] Full prompt size: ${fullPrompt.length} characters (${Math.round(fullPrompt.length/1024)}KB)`);
+
+  try {
+    const response = await ai.models.generateContentStream({
+      model: "gemini-3-pro-preview",
+      contents: [
+        {
+          role: "user",
+          parts,
+        },
+      ],
+      config: {
+        temperature: 1.0,
+        maxOutputTokens: 65536,
       },
-    ],
-    config: {
-      temperature: 1.0,
-      maxOutputTokens: 65536,
-    },
-  });
+    });
 
-  console.log("[Gemini] Got response stream, starting to iterate...");
-  let chunkCount = 0;
+    console.log("[Gemini] Got response stream, starting to iterate...");
+    let chunkCount = 0;
 
-  for await (const chunk of response) {
-    const text = chunk.text;
-    if (text) {
-      chunkCount++;
-      if (chunkCount % 10 === 0) {
-        console.log(`[Gemini] Yielding chunk #${chunkCount}, length: ${text.length}`);
+    for await (const chunk of response) {
+      const text = chunk.text;
+      if (text) {
+        chunkCount++;
+        if (chunkCount % 10 === 0) {
+          console.log(`[Gemini] Yielding chunk #${chunkCount}, length: ${text.length}`);
+        }
+        yield text;
       }
-      yield text;
     }
-  }
 
-  console.log(`[Gemini] Stream complete. Total chunks: ${chunkCount}`);
+    console.log(`[Gemini] Stream complete. Total chunks: ${chunkCount}`);
+  } catch (error) {
+    console.error("[Gemini] Error during stream:", error);
+    // Re-throw the error so it can be caught by the route handler
+    throw error;
+  }
 }
 
 function cleanHtmlResponse(text: string): string {
