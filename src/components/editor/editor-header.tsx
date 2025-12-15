@@ -42,29 +42,38 @@ import JSZip from "jszip";
 // Helper function to fetch Google Font CSS and convert fonts to base64
 async function fetchGoogleFontsAsBase64(fontNames: string[]): Promise<string> {
   const fontCSS: string[] = [];
+  console.log("[fetchGoogleFontsAsBase64] Starting for fonts:", fontNames);
 
   for (const fontName of fontNames) {
     try {
       // Fetch the CSS from Google Fonts
       const fontUrl = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, "+")}:wght@300;400;500;600;700;800&display=swap`;
+      console.log("[fetchGoogleFontsAsBase64] Fetching CSS from:", fontUrl);
 
-      const response = await fetch(fontUrl, {
-        headers: {
-          // Request woff2 format by mimicking a modern browser
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-      });
+      const response = await fetch(fontUrl);
 
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.warn("[fetchGoogleFontsAsBase64] Failed to fetch CSS:", response.status);
+        continue;
+      }
 
       let css = await response.text();
+      console.log("[fetchGoogleFontsAsBase64] Got CSS, length:", css.length);
 
       // Find all url() references in the CSS and convert to base64
-      const urlMatches = css.matchAll(/url\((https:\/\/[^)]+)\)/g);
+      // Use Array.from to avoid iterator consumption issues
+      const urlRegex = /url\((https:\/\/[^)]+)\)/g;
+      const allUrls: string[] = [];
+      let urlMatch;
+      while ((urlMatch = urlRegex.exec(css)) !== null) {
+        allUrls.push(urlMatch[1]);
+      }
 
-      for (const match of urlMatches) {
-        const fontFileUrl = match[1];
+      console.log("[fetchGoogleFontsAsBase64] Found font URLs:", allUrls.length);
+
+      for (const fontFileUrl of allUrls) {
         try {
+          console.log("[fetchGoogleFontsAsBase64] Fetching font file:", fontFileUrl);
           const fontResponse = await fetch(fontFileUrl);
           if (fontResponse.ok) {
             const fontBlob = await fontResponse.blob();
@@ -73,51 +82,151 @@ async function fetchGoogleFontsAsBase64(fontNames: string[]): Promise<string> {
               reader.onloadend = () => resolve(reader.result as string);
               reader.readAsDataURL(fontBlob);
             });
-            css = css.replace(fontFileUrl, base64);
+            // Replace ALL occurrences of this URL
+            css = css.split(fontFileUrl).join(base64);
+            console.log("[fetchGoogleFontsAsBase64] Converted to base64, new length:", css.length);
           }
         } catch (fontFileError) {
-          console.warn(`Failed to fetch font file: ${fontFileUrl}`, fontFileError);
+          console.warn(`[fetchGoogleFontsAsBase64] Failed to fetch font file: ${fontFileUrl}`, fontFileError);
         }
       }
 
       fontCSS.push(css);
     } catch (error) {
-      console.warn(`Failed to fetch font: ${fontName}`, error);
+      console.warn(`[fetchGoogleFontsAsBase64] Failed to fetch font: ${fontName}`, error);
     }
   }
 
-  return fontCSS.join('\n');
+  const result = fontCSS.join('\n');
+  console.log("[fetchGoogleFontsAsBase64] Final CSS length:", result.length);
+  return result;
 }
 
 // Extract font names used in the iframe
-function extractFontNamesFromIframe(iframeDoc: Document): string[] {
+function extractFontNamesFromIframe(iframeDoc: Document, iframeWindow: Window | null): string[] {
   const fontNames = new Set<string>();
+
+  // System/generic fonts to exclude - these don't need to be fetched from Google
+  const excludedFonts = [
+    'sans-serif', 'serif', 'monospace', 'cursive', 'fantasy',
+    'inherit', 'initial', 'unset', 'revert', 'none',
+    'system-ui', 'ui-sans-serif', 'ui-serif', 'ui-monospace', 'ui-rounded',
+    '-apple-system', 'blinkmacsystemfont',
+    'segoe ui', 'segoe ui emoji', 'segoe ui symbol',
+    'arial', 'helvetica', 'helvetica neue', 'verdana', 'tahoma', 'trebuchet ms',
+    'times', 'times new roman', 'georgia', 'garamond', 'palatino',
+    'courier', 'courier new', 'lucida console', 'monaco',
+    'apple color emoji', 'noto color emoji', 'android emoji', 'emojisymbols',
+    'symbola', 'webdings', 'wingdings'
+  ];
+
+  // Helper to check if a font name looks like a Google Font (not a system font)
+  const isLikelyGoogleFont = (fontName: string): boolean => {
+    const lower = fontName.toLowerCase();
+    // Exclude system fonts
+    if (excludedFonts.includes(lower)) return false;
+    // Must start with uppercase (Google Fonts convention)
+    if (!/^[A-Z]/.test(fontName)) return false;
+    // Exclude fonts that are clearly emoji/symbol fonts
+    if (lower.includes('emoji') || lower.includes('symbol')) return false;
+    return true;
+  };
 
   // Check style tag with Google Fonts imports
   const fontStyleTag = iframeDoc.getElementById("buildix-font-imports");
-  if (fontStyleTag) {
-    const importMatches = fontStyleTag.textContent?.matchAll(/family=([^:&]+)/g);
-    if (importMatches) {
-      for (const match of importMatches) {
-        fontNames.add(match[1].replace(/\+/g, ' '));
-      }
+  if (fontStyleTag && fontStyleTag.textContent) {
+    console.log("[extractFontNamesFromIframe] Found font style tag:", fontStyleTag.textContent);
+    const regex = /family=([^:&]+)/g;
+    let match;
+    while ((match = regex.exec(fontStyleTag.textContent)) !== null) {
+      const fontName = match[1].replace(/\+/g, ' ');
+      console.log("[extractFontNamesFromIframe] Found font from style tag:", fontName);
+      fontNames.add(fontName);
     }
   }
 
-  // Also check computed styles on elements
-  const elements = iframeDoc.querySelectorAll('*');
-  elements.forEach((el) => {
-    const style = (el as HTMLElement).style;
-    if (style.fontFamily) {
-      // Extract font name from font-family (e.g., "'Playfair Display', serif" -> "Playfair Display")
-      const match = style.fontFamily.match(/['"]?([^'",]+)['"]?/);
-      if (match && match[1] && !['sans-serif', 'serif', 'monospace', 'cursive', 'fantasy'].includes(match[1].toLowerCase())) {
-        fontNames.add(match[1]);
+  // Check all style tags for @import rules with Google Fonts
+  const allStyleTags = iframeDoc.querySelectorAll('style');
+  allStyleTags.forEach((styleTag) => {
+    const content = styleTag.textContent || '';
+    // Look for @import url with Google Fonts
+    const importRegex = /@import\s+url\(['"]?(https:\/\/fonts\.googleapis\.com[^'")\s]+)['"]?\)/g;
+    let importMatch;
+    while ((importMatch = importRegex.exec(content)) !== null) {
+      const url = importMatch[1];
+      const familyMatch = url.match(/family=([^:&]+)/);
+      if (familyMatch) {
+        const fontName = familyMatch[1].replace(/\+/g, ' ');
+        console.log("[extractFontNamesFromIframe] Found font from @import:", fontName);
+        fontNames.add(fontName);
       }
     }
   });
 
-  return Array.from(fontNames);
+  // Check inline styles on ALL elements (most reliable for AI-generated content)
+  const allElements = iframeDoc.querySelectorAll('*');
+  allElements.forEach((el) => {
+    const element = el as HTMLElement;
+
+    // Check inline style attribute directly
+    const styleAttr = element.getAttribute('style');
+    if (styleAttr && styleAttr.includes('font-family')) {
+      // Extract font-family value from style attribute
+      const fontFamilyMatch = styleAttr.match(/font-family:\s*([^;]+)/i);
+      if (fontFamilyMatch) {
+        const fontStack = fontFamilyMatch[1].split(',');
+        for (const font of fontStack) {
+          const fontName = font.trim().replace(/['"]/g, '');
+          if (fontName && isLikelyGoogleFont(fontName)) {
+            console.log("[extractFontNamesFromIframe] Found font from inline style:", fontName);
+            fontNames.add(fontName);
+          }
+        }
+      }
+    }
+
+    // Also check element.style.fontFamily (for programmatically set styles)
+    if (element.style.fontFamily) {
+      const fontStack = element.style.fontFamily.split(',');
+      for (const font of fontStack) {
+        const fontName = font.trim().replace(/['"]/g, '');
+        if (fontName && isLikelyGoogleFont(fontName)) {
+          console.log("[extractFontNamesFromIframe] Found font from style property:", fontName);
+          fontNames.add(fontName);
+        }
+      }
+    }
+  });
+
+  // Also check computed styles but only for elements that actually have text
+  if (iframeWindow) {
+    const textElements = iframeDoc.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, a, li, td, th, label, button');
+    textElements.forEach((el) => {
+      const element = el as HTMLElement;
+      // Only check if element has actual text content
+      if (element.textContent && element.textContent.trim()) {
+        try {
+          const computedStyle = iframeWindow.getComputedStyle(element);
+          const computedFont = computedStyle.fontFamily;
+          if (computedFont) {
+            // Get the first font in the stack (the one actually being used)
+            const fonts = computedFont.split(',');
+            const primaryFont = fonts[0]?.trim().replace(/['"]/g, '');
+            if (primaryFont && isLikelyGoogleFont(primaryFont)) {
+              console.log("[extractFontNamesFromIframe] Found font from computed style:", primaryFont);
+              fontNames.add(primaryFont);
+            }
+          }
+        } catch (e) {
+          // Ignore errors
+        }
+      }
+    });
+  }
+
+  const result = Array.from(fontNames);
+  console.log("[extractFontNamesFromIframe] All fonts found:", result);
+  return result;
 }
 import { Button } from "@/components/ui/button";
 import { injectBackgroundAssets } from "@/lib/background-assets";
@@ -274,7 +383,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       }
 
       // Extrair nomes das fontes usadas no iframe e buscar como base64
-      const fontNames = extractFontNamesFromIframe(iframeDoc);
+      const fontNames = extractFontNamesFromIframe(iframeDoc, iframeWindow);
       console.log("[Export] Fonts detected:", fontNames);
 
       let fontEmbedCSS: string | undefined;
@@ -349,7 +458,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       }
 
       // 2. Extrair nomes das fontes usadas no iframe e buscar como base64
-      const fontNames = extractFontNamesFromIframe(iframeDoc);
+      const fontNames = extractFontNamesFromIframe(iframeDoc, iframeWindow);
       console.log("[Export] Fonts detected:", fontNames);
 
       let fontEmbedCSS: string | undefined;
