@@ -1,4 +1,5 @@
 import { getMaintenanceStatus } from "@/lib/maintenance";
+import { CosmosLogo } from "@/components/shared/cosmos-logo";
 
 export default async function ComingSoonPage() {
   const status = await getMaintenanceStatus();
@@ -22,26 +23,9 @@ export default async function ComingSoonPage() {
 
       {/* Content */}
       <div className="relative z-10 text-center max-w-2xl mx-auto">
-        {/* Logo/Brand */}
+        {/* Logo - CosmosLogo */}
         <div className="mb-8 inline-flex items-center justify-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-indigo-500 blur-xl opacity-50 animate-pulse" />
-            <div className="relative bg-gradient-to-r from-violet-500 to-indigo-500 p-4 rounded-2xl">
-              <svg
-                className="w-12 h-12 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-          </div>
+          <CosmosLogo className="w-24 h-24 md:w-32 md:h-32" />
         </div>
 
         {/* Title */}
