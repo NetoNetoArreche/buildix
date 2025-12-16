@@ -669,11 +669,24 @@ function parseStyles(element: SelectedElementData) {
     backgroundSize: styles.backgroundSize || "auto",
     backgroundPosition: styles.backgroundPosition || "0% 0%",
 
-    // Border
-    borderWidth: styles.borderWidth || styles.borderTopWidth || "0px",
-    borderStyle: styles.borderStyle || styles.borderTopStyle || "none",
-    borderColor: styles.borderColor || styles.borderTopColor || "transparent",
+    // Border - check individual sides first, then general border
+    borderWidth: styles.borderWidth || styles.borderTopWidth || styles.borderBottomWidth || styles.borderLeftWidth || styles.borderRightWidth || "0px",
+    borderStyle: styles.borderStyle || styles.borderTopStyle || styles.borderBottomStyle || styles.borderLeftStyle || styles.borderRightStyle || "none",
+    borderColor: styles.borderColor || styles.borderTopColor || styles.borderBottomColor || styles.borderLeftColor || styles.borderRightColor || "transparent",
     borderRadius: styles.borderRadius || styles.borderTopLeftRadius || "0px",
+    // Individual border sides
+    borderTopWidth: styles.borderTopWidth || "",
+    borderBottomWidth: styles.borderBottomWidth || "",
+    borderLeftWidth: styles.borderLeftWidth || "",
+    borderRightWidth: styles.borderRightWidth || "",
+    borderTopStyle: styles.borderTopStyle || "",
+    borderBottomStyle: styles.borderBottomStyle || "",
+    borderLeftStyle: styles.borderLeftStyle || "",
+    borderRightStyle: styles.borderRightStyle || "",
+    borderTopColor: styles.borderTopColor || "",
+    borderBottomColor: styles.borderBottomColor || "",
+    borderLeftColor: styles.borderLeftColor || "",
+    borderRightColor: styles.borderRightColor || "",
 
     // Position
     position: styles.position || "static",
@@ -735,7 +748,12 @@ function applyLiveStyleToCanvas(elementId: string, cssProperty: string, value: s
         targetElement.style.setProperty("color", value);
       }
     } else {
-      targetElement.style.setProperty(cssProperty, value);
+      // If value is empty, remove the property; otherwise set it
+      if (value === "" || value === undefined || value === null) {
+        targetElement.style.removeProperty(cssProperty);
+      } else {
+        targetElement.style.setProperty(cssProperty, value);
+      }
     }
   }
 }
@@ -1780,6 +1798,18 @@ function EditTab({ element, projectId, currentPageId, savePage }: EditTabProps) 
         borderStyle={styleState.borderStyle}
         borderColor={styleState.borderColor}
         borderRadius={styleState.borderRadius}
+        borderTopWidth={styleState.borderTopWidth}
+        borderBottomWidth={styleState.borderBottomWidth}
+        borderLeftWidth={styleState.borderLeftWidth}
+        borderRightWidth={styleState.borderRightWidth}
+        borderTopStyle={styleState.borderTopStyle}
+        borderBottomStyle={styleState.borderBottomStyle}
+        borderLeftStyle={styleState.borderLeftStyle}
+        borderRightStyle={styleState.borderRightStyle}
+        borderTopColor={styleState.borderTopColor}
+        borderBottomColor={styleState.borderBottomColor}
+        borderLeftColor={styleState.borderLeftColor}
+        borderRightColor={styleState.borderRightColor}
         onBorderChange={updateStyle}
         activeProperties={activeProperties}
         hasActiveProperties={sectionHasActive.border}
