@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query");
@@ -36,7 +40,7 @@ export async function GET(req: NextRequest) {
           category: img.category,
           source: "buildix",
         }));
-        return NextResponse.json({ images });
+        return NextResponse.json({ images }, { headers: CACHE_HEADERS });
       }
     } catch (dbError) {
       // Database query failed, fall back to placeholder images
@@ -113,7 +117,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ images: filteredImages });
+    return NextResponse.json({ images: filteredImages }, { headers: CACHE_HEADERS });
   } catch (error) {
     console.error("Buildix gallery error:", error);
     return NextResponse.json(

@@ -9,11 +9,18 @@ export async function GET() {
   try {
     const status = await getMaintenanceStatus();
 
-    return NextResponse.json({
-      maintenanceMode: status.enabled,
-      title: status.title,
-      message: status.message,
-    });
+    return NextResponse.json(
+      {
+        maintenanceMode: status.enabled,
+        title: status.title,
+        message: status.message,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     console.error("[API] Error getting maintenance status:", error);
     return NextResponse.json(

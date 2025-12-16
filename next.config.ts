@@ -19,6 +19,17 @@ const nextConfig: NextConfig = {
     // Limite para requests processados pelo proxy (Next.js 16)
     proxyClientMaxBodySize: "50mb",
   },
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
+      { protocol: "https", hostname: "*.pexels.com" },
+      { protocol: "https", hostname: "cdn.buildixlab.com" },
+    ],
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400, // 24 horas
+  },
 };
 
 export default withNextIntl(nextConfig);
