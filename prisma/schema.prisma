@@ -439,3 +439,19 @@ model ChangelogEntry {
   @@index([isPublished, publishedAt])
   @@map("changelog_entries")
 }
+
+// ============================================
+// SITE SETTINGS MODEL
+// ============================================
+
+// SiteSettings - global site configuration (maintenance mode, etc.)
+model SiteSettings {
+  id                 String   @id @default("default")
+  maintenanceMode    Boolean  @default(false)
+  maintenanceTitle   String?  @default("BuildixLab")
+  maintenanceMessage String?  @default("Em breve estará disponível")
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?  // ID do admin que alterou
+
+  @@map("site_settings")
+}
