@@ -148,6 +148,33 @@ export async function POST(request: NextRequest) {
           systemPrompt = SYSTEM_PROMPTS.instagramStory;
         }
         break;
+      // Mobile App screens - multi-screen like carousel
+      case "mobile-app":
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for mobile-app (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.mobileApp;
+        }
+        break;
+      // Dashboard - admin panel layout
+      case "dashboard":
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for dashboard (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.dashboard;
+        }
+        break;
+      // Email Template - email marketing design
+      case "email-template":
+        if (body.currentHtml) {
+          systemPrompt = SYSTEM_PROMPTS.revision.replace("{currentHtml}", body.currentHtml);
+          console.log("[Stream API] Using revision prompt for email-template (has existing HTML)");
+        } else {
+          systemPrompt = SYSTEM_PROMPTS.emailTemplate;
+        }
+        break;
       // Image reference type - for NEW generation from image (no existing HTML)
       case "image-reference":
         systemPrompt = SYSTEM_PROMPTS.imageReference;

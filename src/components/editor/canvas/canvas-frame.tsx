@@ -15,7 +15,7 @@ interface CanvasFrameProps {
   isDesignMode: boolean;
   onElementSelect: (id: string | null, data?: SelectedElementData) => void;
   selectedElementId: string | null;
-  contentType?: "landing" | "instagram-post" | "instagram-carousel" | "instagram-story";
+  contentType?: "landing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "mobile-app" | "dashboard" | "email-template";
   isStreaming?: boolean;
   deviceMode?: "desktop" | "tablet" | "mobile";
   onAddContentAfter?: (event: AddContentAfterEvent) => void;
@@ -600,8 +600,8 @@ export function CanvasFrame({
         // Just update body innerHTML - no full reload = no flicker!
         doc.body.innerHTML = newBody;
 
-        // For carousel, apply inline styles to ensure horizontal layout during streaming
-        if (contentType === "instagram-carousel") {
+        // For carousel/mobile-app, apply inline styles to ensure horizontal layout during streaming
+        if (contentType === "instagram-carousel" || contentType === "mobile-app") {
           doc.body.style.cssText = "display: flex !important; gap: 2rem !important; overflow-x: auto !important; padding: 2rem !important; margin: 0 !important; background-color: #27272a !important; min-height: 100% !important; align-items: flex-start !important;";
         }
 
@@ -611,9 +611,9 @@ export function CanvasFrame({
     }
 
     // Full reload needed (initial load, head changed, or not streaming)
-    // For carousel during streaming, inject CSS to force horizontal layout
+    // For carousel/mobile-app during streaming, inject CSS to force horizontal layout
     let finalHtml = html;
-    if (isStreaming && contentType === "instagram-carousel" && html) {
+    if (isStreaming && (contentType === "instagram-carousel" || contentType === "mobile-app") && html) {
       // Inject carousel layout CSS into the head to ensure horizontal display during streaming
       const carouselCss = `<style id="buildix-carousel-streaming">
         body {
@@ -785,6 +785,14 @@ export function CanvasFrame({
         return { width: "auto", height: "1414px", minHeight: "1414px", minWidth: "11200px" }; // 1350 + 64 padding
       case "instagram-story":
         return { width: "1080px", height: "1920px", minHeight: "1920px" };
+      case "mobile-app":
+        // Similar to carousel - horizontal scroll with multiple screens
+        // Max 10 screens: 10 × 390px + 9 × 32px (gap-8) + 64px (p-8 padding) = 4252px
+        return { width: "auto", height: "908px", minHeight: "908px", minWidth: "4300px" }; // 844 + 64 padding
+      case "dashboard":
+        return { width: "1440px", height: "900px", minHeight: "900px" };
+      case "email-template":
+        return { width: "600px", height: "auto", minHeight: "800px" };
       default:
         // For landing pages, respect deviceMode
         const deviceWidths = {

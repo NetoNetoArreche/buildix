@@ -17,9 +17,26 @@ import { CodeEditor } from "./code-editor";
 import { injectBackgroundAssets } from "@/lib/background-assets";
 import { FrameHeader } from "../canvas-mode/FrameHeader";
 
+import type { ContentType } from "@/lib/constants/instagram-dimensions";
+
 // Detect content type from HTML
-function detectContentType(html: string): "landing" | "instagram-post" | "instagram-carousel" | "instagram-story" {
+function detectContentType(html: string): ContentType {
   if (!html) return "landing";
+
+  // Check for mobile app screens
+  if (html.includes("app-screen")) {
+    return "mobile-app";
+  }
+
+  // Check for dashboard container
+  if (html.includes("dashboard-container")) {
+    return "dashboard";
+  }
+
+  // Check for email template container
+  if (html.includes("email-container")) {
+    return "email-template";
+  }
 
   // Check for carousel slides
   if (html.includes("carousel-slide")) {
@@ -334,11 +351,14 @@ export function Canvas() {
     }
 
     // Content dimensions based on type
-    // For carousel, include the body padding (p-8 = 32px top + bottom = 64px extra)
-    const contentDimensions = {
+    // For carousel/mobile-app, include the body padding (p-8 = 32px top + bottom = 64px extra)
+    const contentDimensions: Record<string, { width: number; height: number }> = {
       "instagram-post": { width: 1080, height: 1080 },
       "instagram-carousel": { width: 1080, height: 1350 + 64 }, // Slide + body padding
       "instagram-story": { width: 1080, height: 1920 },
+      "mobile-app": { width: 390, height: 844 + 64 }, // Screen + body padding
+      "dashboard": { width: 1440, height: 900 },
+      "email-template": { width: 600, height: 800 + 80 }, // Email + body padding
     };
 
     const dims = contentDimensions[contentType] || { width: 1080, height: 1080 };
@@ -370,9 +390,9 @@ export function Canvas() {
   const effectiveZoom = canvasModeOpen ? canvasModeZoom : zoom;
   const finalScale = isInstagramContent ? autoScale * (effectiveZoom / 100) : effectiveZoom / 100;
 
-  // For carousel, we need left alignment for horizontal scroll
-  // For post/story, we can center horizontally
-  const isCarousel = contentType === "instagram-carousel";
+  // For carousel/mobile-app, we need left alignment for horizontal scroll
+  // For post/story/dashboard, we can center horizontally
+  const isCarousel = contentType === "instagram-carousel" || contentType === "mobile-app";
 
   // Canvas Mode 3D transform styles (only for non-canvas mode)
   const normalModeTransform = `scale(${finalScale})`;

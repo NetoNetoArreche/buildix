@@ -360,6 +360,242 @@ STORY DESIGN TIPS:
 
 Remember: Output ONLY the HTML code, starting with <!DOCTYPE html>`,
 
+  // Mobile App screens prompt
+  mobileApp: `You are creating a mobile app interface with multiple screens (390x844px each - iPhone 14 Pro).
+
+CRITICAL REQUIREMENTS:
+1. Output ONLY valid HTML - no explanations
+2. Each screen is 390x844px (iPhone 14 Pro dimensions)
+3. Generate 5 screens by default: Splash, Login, Home, Feature, Settings
+4. Use consistent design across ALL screens (same colors, fonts, iOS-like style)
+5. Each screen is wrapped in a div with class "app-screen"
+6. Screens are laid out horizontally for easy viewing
+
+STRUCTURE:
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=390">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+  </style>
+</head>
+<body class="m-0 p-8 bg-zinc-800 flex gap-8 overflow-x-auto">
+  <div class="app-screen w-[390px] h-[844px] flex-shrink-0 relative overflow-hidden bg-white rounded-[44px] shadow-2xl border-[8px] border-zinc-900">
+    <!-- Screen 1: Splash/Loading -->
+  </div>
+  <div class="app-screen w-[390px] h-[844px] flex-shrink-0 relative overflow-hidden bg-white rounded-[44px] shadow-2xl border-[8px] border-zinc-900">
+    <!-- Screen 2: Login/Onboarding -->
+  </div>
+  <div class="app-screen w-[390px] h-[844px] flex-shrink-0 relative overflow-hidden bg-white rounded-[44px] shadow-2xl border-[8px] border-zinc-900">
+    <!-- Screen 3: Home/Dashboard -->
+  </div>
+  <div class="app-screen w-[390px] h-[844px] flex-shrink-0 relative overflow-hidden bg-white rounded-[44px] shadow-2xl border-[8px] border-zinc-900">
+    <!-- Screen 4: Feature/Detail -->
+  </div>
+  <div class="app-screen w-[390px] h-[844px] flex-shrink-0 relative overflow-hidden bg-white rounded-[44px] shadow-2xl border-[8px] border-zinc-900">
+    <!-- Screen 5: Settings/Profile -->
+  </div>
+</body>
+</html>
+
+MOBILE APP DESIGN TIPS:
+- Use iOS-like design: rounded corners, subtle shadows, SF Pro-like typography
+- Include status bar area (top 47px for Dynamic Island notch)
+- Include home indicator area (bottom 34px)
+- Use system colors: blue (#007AFF) for actions, gray for secondary
+- Navigation: tab bars at bottom, back buttons, headers with titles
+- Touch-friendly: min 44px tap targets
+- Safe areas: 47px top padding, 34px bottom padding
+- Use appropriate icons for navigation (home, search, profile, settings)
+- Cards and list items should have proper padding (16-20px)
+- Maintain visual flow between screens (consistent navigation)
+
+SCREEN SUGGESTIONS:
+- Screen 1: Splash screen with app logo and loading indicator
+- Screen 2: Login/signup with email, password fields, social login buttons
+- Screen 3: Home/main dashboard with key features, cards, navigation
+- Screen 4: Detail/feature screen showing specific functionality
+- Screen 5: Settings/profile with user info, preferences, logout
+
+Remember: Output ONLY the HTML code, starting with <!DOCTYPE html>`,
+
+  // Dashboard prompt
+  dashboard: `You are creating a professional admin dashboard (1440x900px).
+
+CRITICAL REQUIREMENTS:
+1. Output ONLY valid HTML - no explanations
+2. Container is exactly 1440x900px
+3. Use dark theme (zinc-950 background recommended)
+4. Include typical dashboard elements: sidebar, header, metrics, charts, tables
+
+STRUCTURE:
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="m-0 p-0 bg-zinc-950">
+  <div class="dashboard-container w-[1440px] h-[900px] relative overflow-hidden flex">
+    <!-- Sidebar (240px) -->
+    <aside class="w-[240px] h-full bg-zinc-900 border-r border-zinc-800 flex flex-col">
+      <!-- Logo area -->
+      <div class="h-16 px-6 flex items-center border-b border-zinc-800">
+        <span class="text-xl font-bold text-white">Dashboard</span>
+      </div>
+      <!-- Navigation -->
+      <nav class="flex-1 p-4 space-y-2">
+        <!-- Nav items -->
+      </nav>
+      <!-- User area -->
+      <div class="p-4 border-t border-zinc-800">
+        <!-- User info -->
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 h-full overflow-auto">
+      <!-- Header -->
+      <header class="h-16 px-6 flex items-center justify-between border-b border-zinc-800">
+        <!-- Title and actions -->
+      </header>
+
+      <!-- Content area -->
+      <div class="p-6 space-y-6">
+        <!-- Metrics cards row -->
+        <div class="grid grid-cols-4 gap-6">
+          <!-- KPI cards -->
+        </div>
+
+        <!-- Charts/tables section -->
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Charts and data tables -->
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
+
+DASHBOARD DESIGN TIPS:
+- Sidebar: 240px width, dark background, logo at top, navigation items with icons
+- Header: page title, search bar, notifications bell, user avatar
+- Metrics row: 4 KPI cards with big numbers, percentage changes (green/red), icons
+- Charts: use styled divs as chart placeholders with gradient backgrounds
+- Tables: data tables with headers, zebra striping, action buttons
+- Color scheme: zinc-950/900/800 for backgrounds, zinc-400/300 for text
+- Accent colors: green-500 for positive, red-500 for negative, blue-500 for actions
+- Use consistent spacing: 24px (p-6) between sections
+- Cards: rounded-xl, border border-zinc-800, subtle shadows
+- Typography: text-sm for labels, text-2xl/3xl for big numbers
+
+SECTIONS TO INCLUDE:
+- KPI cards: Revenue, Users, Orders, Conversion Rate (with trend indicators)
+- Main chart: Line or bar chart placeholder with proper styling
+- Recent activity/transactions table
+- Secondary charts or smaller widgets
+
+Remember: Output ONLY the HTML code, starting with <!DOCTYPE html>`,
+
+  // Email Template prompt
+  emailTemplate: `You are creating a professional email marketing template (600px width).
+
+CRITICAL REQUIREMENTS:
+1. Output ONLY valid HTML - no explanations
+2. Container width is exactly 600px (standard email width)
+3. Use TABLE-based layout for email compatibility
+4. Inline CSS styles (style attribute) - email clients don't support <style> tags well
+5. Use web-safe fonts: Arial, Helvetica, Georgia, Times New Roman
+6. Include fallback background colors for images
+
+STRUCTURE:
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=600">
+  <title>Email Template</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, Helvetica, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f4f4;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <!-- Email container -->
+        <table class="email-container" role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+          <!-- Header -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #1a1a2e; text-align: center;">
+              <!-- Logo and header content -->
+            </td>
+          </tr>
+
+          <!-- Hero Section -->
+          <tr>
+            <td style="padding: 40px;">
+              <!-- Main content -->
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 40px 40px; text-align: center;">
+              <a href="#" style="display: inline-block; padding: 16px 32px; background-color: #6366f1; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold;">Call to Action</a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px 40px; background-color: #f8f9fa; text-align: center; font-size: 12px; color: #666666;">
+              <!-- Footer content, unsubscribe link -->
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+
+EMAIL DESIGN TIPS:
+- Header: Logo, company name, navigation (keep simple)
+- Hero: Large headline, supporting text, main image (optional)
+- Content: Benefits, features, product highlights
+- CTA: One clear primary button (make it stand out)
+- Footer: Contact info, social links, unsubscribe link, legal text
+- Use bulletproof buttons (table-based for Outlook compatibility)
+- Keep images under 600px wide
+- Alt text for all images
+- Preheader text for email preview
+- Mobile-friendly: stack columns on small screens
+
+EMAIL TYPES TO CONSIDER:
+- Welcome email: Onboarding, first steps
+- Newsletter: Updates, blog posts, news
+- Promotional: Sales, discounts, offers
+- Transactional: Order confirmation, receipts
+- Abandoned cart: Product reminder, incentive
+- Re-engagement: Win back inactive users
+
+COLOR GUIDELINES:
+- Dark backgrounds work well for headers
+- White/light backgrounds for content sections
+- Brand accent color for CTAs
+- Neutral grays for footer
+- Ensure 4.5:1 contrast ratio for text
+
+Remember: Output ONLY the HTML code, starting with <!DOCTYPE html>`,
+
   // Insert after element prompt - for adding new content after a selected element
   insertAfter: `You are an expert web designer. The user wants to INSERT NEW CONTENT after an existing element in their page.
 

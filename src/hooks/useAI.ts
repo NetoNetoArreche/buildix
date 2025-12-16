@@ -9,7 +9,7 @@ export type { AIModel };
 interface GenerateOptions {
   prompt: string;
   model: AIModel;
-  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "insertAfter" | "page-generation";
+  type?: "generation" | "revision" | "revision-with-image" | "editing" | "editing-with-component" | "instagram-post" | "instagram-carousel" | "instagram-story" | "mobile-app" | "dashboard" | "email-template" | "image-reference" | "insertAfter" | "page-generation";
   currentHtml?: string;
   elementHtml?: string;
   designContext?: string; // For multi-page consistency - design tokens extracted from other pages

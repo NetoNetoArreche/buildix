@@ -545,6 +545,128 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
     }
   };
 
+  // Export mobile app screens as ZIP with multiple images
+  const handleExportMobileAppAsZip = async () => {
+    const iframe = document.querySelector('iframe[title="Preview"]') as HTMLIFrameElement;
+    if (!iframe?.contentDocument) {
+      console.error("Cannot access iframe content");
+      setExportError("Não foi possível acessar o conteúdo do iframe.");
+      return;
+    }
+
+    // Find all app screens
+    const screens = iframe.contentDocument.querySelectorAll(".app-screen");
+    if (screens.length === 0) {
+      // Fallback: try to find first child elements in body
+      const bodyChildren = iframe.contentDocument.body.children;
+      if (bodyChildren.length === 0) {
+        console.error("No screens found to export");
+        setExportError("Nenhuma tela encontrada para exportar.");
+        return;
+      }
+      // If no app-screen class, export single image instead
+      await handleExportAsImage();
+      return;
+    }
+
+    setIsExporting(true);
+    setExportError(null);
+
+    try {
+      const zip = new JSZip();
+      let failedScreens = 0;
+      const iframeWindow = iframe.contentWindow;
+      const iframeDoc = iframe.contentDocument;
+
+      // 1. Aguardar carregamento de todas as fontes no iframe
+      if (iframeWindow?.document?.fonts) {
+        await iframeWindow.document.fonts.ready;
+      }
+
+      // 2. Extrair nomes das fontes usadas no iframe e buscar como base64
+      const fontNames = extractFontNamesFromIframe(iframeDoc, iframeWindow);
+      console.log("[Export Mobile] Fonts detected:", fontNames);
+
+      let fontEmbedCSS: string | undefined;
+      if (fontNames.length > 0) {
+        try {
+          fontEmbedCSS = await fetchGoogleFontsAsBase64(fontNames);
+          console.log("[Export Mobile] Font CSS generated, length:", fontEmbedCSS?.length);
+        } catch (fontError) {
+          console.warn("Não foi possível embarcar fontes:", fontError);
+        }
+      }
+
+      for (let i = 0; i < screens.length; i++) {
+        const screen = screens[i] as HTMLElement;
+
+        // Get the computed background color of the screen
+        const computedStyle = iframeWindow?.getComputedStyle(screen);
+        let bgColor = computedStyle?.backgroundColor || "#fff";
+
+        // If background is transparent or not set, check inline style or use default
+        if (bgColor === "rgba(0, 0, 0, 0)" || bgColor === "transparent") {
+          // Try to get from inline style
+          bgColor = screen.style.backgroundColor || "#fff";
+        }
+
+        try {
+          const blob = await toBlob(screen, {
+            width: 390,
+            height: 844,
+            pixelRatio: 2,
+            backgroundColor: bgColor,
+            skipAutoScale: true,
+            cacheBust: true,
+            fontEmbedCSS,
+            preferredFontFormat: "woff2",
+            filter: (node) => {
+              // Skip broken images to prevent export failure
+              if (node instanceof HTMLImageElement && !node.complete) {
+                return false;
+              }
+              return true;
+            },
+          });
+          if (blob) {
+            zip.file(`screen-${String(i + 1).padStart(2, "0")}.png`, blob);
+          } else {
+            failedScreens++;
+            console.warn(`Screen ${i + 1} gerou blob vazio`);
+          }
+        } catch (screenError) {
+          failedScreens++;
+          console.warn(`Falha ao exportar screen ${i + 1}:`, screenError);
+        }
+      }
+
+      // Check if any screens were exported
+      const exportedCount = screens.length - failedScreens;
+      if (exportedCount === 0) {
+        setExportError("Nenhuma tela foi exportada. Verifique se as imagens carregaram corretamente.");
+        return;
+      }
+
+      // Generate and download ZIP
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.download = `${projectName || "mobile-app"}.zip`;
+      link.href = URL.createObjectURL(zipBlob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+
+      // Show warning if some screens failed
+      if (failedScreens > 0) {
+        setExportError(`Aviso: ${failedScreens} tela(s) não foram exportadas devido a imagens com erro.`);
+      }
+    } catch (error) {
+      console.error("Export mobile app failed:", error);
+      setExportError("Erro ao exportar mobile app. Verifique se todas as imagens carregaram.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Update project thumbnail manually
   const handleUpdateThumbnail = async () => {
     if (projectId === "new") return;
@@ -1008,6 +1130,19 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
                 <>
                   <Images className="mr-2 h-4 w-4" />
                   Export Carousel (ZIP)
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportMobileAppAsZip} disabled={isExporting}>
+              {isExporting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Smartphone className="mr-2 h-4 w-4" />
+                  Export Mobile App (ZIP)
                 </>
               )}
             </DropdownMenuItem>

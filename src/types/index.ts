@@ -130,7 +130,7 @@ export type AssetCategory =
 export type ViewMode = "preview" | "design" | "code";
 export type DeviceMode = "desktop" | "tablet" | "mobile";
 export type AIModel = "gemini" | "claude";
-export type ContentType = "landing" | "instagram-post" | "instagram-carousel" | "instagram-story";
+export type ContentType = "landing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "mobile-app" | "dashboard" | "email-template";
 
 export interface ElementNode {
   id: string;

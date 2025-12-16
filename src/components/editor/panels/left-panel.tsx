@@ -14,6 +14,7 @@ import {
   User,
   AlertCircle,
   Layout,
+  LayoutDashboard,
   Square,
   Layers,
   Smartphone,
@@ -22,6 +23,7 @@ import {
   X,
   Figma,
   ChevronDown,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -682,9 +684,9 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
     const isRevision = hasExistingHtml && !wantsNewPage;
 
     // Determine the generation type
-    let generationType: "generation" | "revision" | "revision-with-image" | "editing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "image-reference" | "page-generation";
+    let generationType: "generation" | "revision" | "revision-with-image" | "editing" | "instagram-post" | "instagram-carousel" | "instagram-story" | "mobile-app" | "dashboard" | "email-template" | "image-reference" | "page-generation";
     if (contentType !== "landing") {
-      // For Instagram types, use the content type directly
+      // For non-landing types (Instagram, mobile-app, dashboard, email), use the content type directly
       generationType = contentType;
     } else if (currentReferenceImage && isRevision) {
       // Revision with image reference - need to preserve existing HTML while using image as inspiration
@@ -1088,21 +1090,57 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
             />
             <div className="flex items-center justify-between border-t p-2 gap-2">
               <div className="flex items-center gap-1 min-w-0 flex-nowrap overflow-hidden">
-                {/* Content Type Selector - Disabled (only landing page for now) */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-1.5 gap-0.5 opacity-40 cursor-not-allowed"
-                      disabled={true}
-                    >
-                      <Layout className="h-3 w-3" />
-                      <ChevronDown className="h-3 w-3 opacity-50" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Tipo de Conteúdo (em breve)</TooltipContent>
-                </Tooltip>
+                {/* Content Type Selector */}
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-1.5 gap-0.5"
+                          disabled={isGenerating}
+                        >
+                          {contentType === "landing" && <Layout className="h-3 w-3" />}
+                          {contentType === "instagram-post" && <Square className="h-3 w-3" />}
+                          {contentType === "instagram-carousel" && <Layers className="h-3 w-3" />}
+                          {contentType === "instagram-story" && <Smartphone className="h-3 w-3" />}
+                          {contentType === "mobile-app" && <Smartphone className="h-3 w-3" />}
+                          {contentType === "dashboard" && <LayoutDashboard className="h-3 w-3" />}
+                          {contentType === "email-template" && <Mail className="h-3 w-3" />}
+                          <ChevronDown className="h-3 w-3 opacity-50" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>{CONTENT_TYPE_OPTIONS.find(o => o.value === contentType)?.label || "Content Type"}</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {CONTENT_TYPE_OPTIONS.map((option) => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        onClick={() => setContentType(option.value as ContentType)}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 cursor-pointer p-2",
+                          contentType === option.value && "bg-accent"
+                        )}
+                      >
+                        <div className="flex items-center gap-2">
+                          {option.value === "landing" && <Layout className="h-3.5 w-3.5" />}
+                          {option.value === "instagram-post" && <Square className="h-3.5 w-3.5" />}
+                          {option.value === "instagram-carousel" && <Layers className="h-3.5 w-3.5" />}
+                          {option.value === "instagram-story" && <Smartphone className="h-3.5 w-3.5" />}
+                          {option.value === "mobile-app" && <Smartphone className="h-3.5 w-3.5" />}
+                          {option.value === "dashboard" && <LayoutDashboard className="h-3.5 w-3.5" />}
+                          {option.value === "email-template" && <Mail className="h-3.5 w-3.5" />}
+                          <span className="font-medium text-sm">{option.label}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-5">
+                          {option.description}
+                        </span>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 {/* AI Model Selector */}
                 <DropdownMenu>
                   <Tooltip>
@@ -1291,7 +1329,7 @@ function ChatMessageComponent({
       </div>
       <div
         className={cn(
-          "flex-1 space-y-2 rounded-lg p-3",
+          "flex-1 space-y-2 rounded-lg p-3 overflow-hidden min-w-0",
           isUser
             ? "bg-[hsl(var(--buildix-primary))]/10"
             : message.error
@@ -1299,7 +1337,7 @@ function ChatMessageComponent({
             : "bg-muted"
         )}
       >
-        <p className="text-sm leading-relaxed">{message.content}</p>
+        <p className="text-sm leading-relaxed break-words whitespace-pre-wrap" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{message.content}</p>
         {!isUser && !message.error && message.showPreviewButton && (
           <Button
             variant="buildix"

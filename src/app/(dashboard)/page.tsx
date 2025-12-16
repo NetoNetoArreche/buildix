@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, Wand2, ArrowRight, Zap, Layout, Palette, Bot, ChevronDown, Square, Layers, Smartphone, Loader2, AtSign, ImagePlus, X, FolderOpen, Figma } from "lucide-react";
+import { Sparkles, Wand2, ArrowRight, Zap, Layout, LayoutDashboard, Palette, Bot, ChevronDown, Square, Layers, Smartphone, Loader2, AtSign, ImagePlus, X, FolderOpen, Figma, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -468,6 +468,9 @@ export default function CreatePage() {
                     {contentType === "instagram-post" && <Square className="h-4 w-4 shrink-0" />}
                     {contentType === "instagram-carousel" && <Layers className="h-4 w-4 shrink-0" />}
                     {contentType === "instagram-story" && <Smartphone className="h-4 w-4 shrink-0" />}
+                    {contentType === "mobile-app" && <Smartphone className="h-4 w-4 shrink-0" />}
+                    {contentType === "dashboard" && <LayoutDashboard className="h-4 w-4 shrink-0" />}
+                    {contentType === "email-template" && <Mail className="h-4 w-4 shrink-0" />}
                     <span className="max-w-0 overflow-hidden whitespace-nowrap transition-all duration-300 group-hover:max-w-[150px] group-hover:ml-2">
                       {CONTENT_TYPE_OPTIONS.find(o => o.value === contentType)?.label || "Landing Page"}
                     </span>
@@ -489,6 +492,9 @@ export default function CreatePage() {
                         {option.value === "instagram-post" && <Square className="h-4 w-4" />}
                         {option.value === "instagram-carousel" && <Layers className="h-4 w-4" />}
                         {option.value === "instagram-story" && <Smartphone className="h-4 w-4" />}
+                        {option.value === "mobile-app" && <Smartphone className="h-4 w-4" />}
+                        {option.value === "dashboard" && <LayoutDashboard className="h-4 w-4" />}
+                        {option.value === "email-template" && <Mail className="h-4 w-4" />}
                         <span className="font-medium">{option.label}</span>
                       </div>
                       <span className="text-xs text-muted-foreground ml-6">
