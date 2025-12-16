@@ -1,12 +1,15 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
+export default auth(async (req) => {
   const isLoggedIn = !!req.auth;
   const isAdmin = req.auth?.user?.role === "admin";
   const { pathname } = req.nextUrl;
 
-  // Public routes that don't require authentication (only login and register)
+  // Routes that bypass maintenance check completely
+  const maintenanceBypassRoutes = ["/coming-soon", "/api/maintenance", "/api/auth"];
+
+  // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register", "/coming-soon"];
 
   // API routes that don't require auth
@@ -18,6 +21,11 @@ export default auth((req) => {
     pathname.startsWith(route)
   );
 
+  // Check if route bypasses maintenance
+  const bypassesMaintenance = maintenanceBypassRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
   // Allow static files and Next.js internals
   if (
     pathname.startsWith("/_next") ||
@@ -25,6 +33,25 @@ export default auth((req) => {
     pathname.includes(".")
   ) {
     return NextResponse.next();
+  }
+
+  // Check maintenance mode (skip for admin users and bypass routes)
+  if (!isAdmin && !bypassesMaintenance) {
+    try {
+      const baseUrl = req.nextUrl.origin;
+      const response = await fetch(`${baseUrl}/api/maintenance/status`, {
+        headers: { "Cache-Control": "no-cache" },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.maintenanceMode) {
+          return NextResponse.redirect(new URL("/coming-soon", req.url));
+        }
+      }
+    } catch {
+      // If API fails, continue normally
+    }
   }
 
   // If not logged in and trying to access protected route
@@ -38,10 +65,6 @@ export default auth((req) => {
   if (isLoggedIn && (pathname === "/login" || pathname === "/register")) {
     return NextResponse.redirect(new URL("/", req.url));
   }
-
-  // Note: Maintenance mode check is handled in the root layout
-  // because middleware runs on Edge runtime and can't access Prisma directly
-  // The layout will redirect non-admin users to /coming-soon when maintenance is enabled
 
   return NextResponse.next();
 });
