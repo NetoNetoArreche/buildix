@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
@@ -12,26 +13,38 @@ export async function GET(req: NextRequest) {
   const color = searchParams.get("color");
   const aspectRatio = searchParams.get("aspectRatio");
 
+  // Pagination params
+  const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
+  const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+  const skip = (page - 1) * limit;
+
   try {
     // Try to fetch from database first
     try {
-      const dbImages = await prisma.buildixGalleryImage.findMany({
-        where: {
-          isActive: true,
-          ...(category && { category }),
-          ...(color && { color }),
-          ...(aspectRatio && aspectRatio !== "all" && { aspectRatio }),
-          ...(query && {
-            OR: [
-              { tags: { has: query.toLowerCase() } },
-              { alt: { contains: query, mode: "insensitive" } },
-            ],
-          }),
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      const where: Prisma.BuildixGalleryImageWhereInput = {
+        isActive: true,
+        ...(category && { category }),
+        ...(color && { color }),
+        ...(aspectRatio && aspectRatio !== "all" && { aspectRatio }),
+        ...(query && {
+          OR: [
+            { tags: { has: query.toLowerCase() } },
+            { alt: { contains: query, mode: "insensitive" as Prisma.QueryMode } },
+          ],
+        }),
+      };
 
-      if (dbImages.length > 0) {
+      const [dbImages, total] = await Promise.all([
+        prisma.buildixGalleryImage.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.buildixGalleryImage.count({ where }),
+      ]);
+
+      if (dbImages.length > 0 || total > 0) {
         const images = dbImages.map((img) => ({
           id: img.id,
           url: img.url,
@@ -40,7 +53,16 @@ export async function GET(req: NextRequest) {
           category: img.category,
           source: "buildix",
         }));
-        return NextResponse.json({ images }, { headers: CACHE_HEADERS });
+        return NextResponse.json({
+          images,
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit),
+            hasMore: page * limit < total,
+          },
+        }, { headers: CACHE_HEADERS });
       }
     } catch (dbError) {
       // Database query failed, fall back to placeholder images
@@ -117,7 +139,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ images: filteredImages }, { headers: CACHE_HEADERS });
+    // Apply pagination to placeholder images
+    const total = filteredImages.length;
+    const paginatedImages = filteredImages.slice(skip, skip + limit);
+
+    return NextResponse.json({
+      images: paginatedImages,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
+      },
+    }, { headers: CACHE_HEADERS });
   } catch (error) {
     console.error("Buildix gallery error:", error);
     return NextResponse.json(

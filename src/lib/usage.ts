@@ -186,6 +186,13 @@ export function getUsageLimitMessage(type: UsageType, plan: PlanType): string {
     htmlExports: "exports HTML",
   };
 
+  const typeFeatureNames: Record<UsageType, string> = {
+    prompts: "Prompts AI",
+    images: "Geração de imagens AI",
+    figmaExports: "Export para Figma",
+    htmlExports: "Export HTML",
+  };
+
   const typeLimit: Record<UsageType, number> = {
     prompts: limits.promptsPerMonth,
     images: limits.imagesPerMonth,
@@ -198,6 +205,11 @@ export function getUsageLimitMessage(type: UsageType, plan: PlanType): string {
   // Se for ilimitado (-1), não deveria chegar aqui, mas retorna mensagem genérica
   if (limit === -1) {
     return `Uso ilimitado de ${typeLabels[type]} disponível no seu plano ${planInfo.name}.`;
+  }
+
+  // Se limite é 0 (feature não disponível no plano FREE)
+  if (limit === 0) {
+    return `${typeFeatureNames[type]} não está disponível no plano Free. Faça upgrade para PRO para acessar esta funcionalidade!`;
   }
 
   if (plan === "FREE") {

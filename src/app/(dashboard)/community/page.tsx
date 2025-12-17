@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import Image from "next/image";
 import {
   Search,
@@ -67,6 +68,24 @@ export default function CommunityPage() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Load more handler for infinite scroll
+  const loadMoreTemplates = useCallback(async () => {
+    if (storeIsLoading || isLoadingMore || pagination.page >= pagination.totalPages) return;
+
+    setIsLoadingMore(true);
+    const state = useCommunityStore.getState();
+    state.setPagination({ ...state.pagination, page: state.pagination.page + 1 });
+    await state.fetchTemplates(false);
+    setIsLoadingMore(false);
+  }, [storeIsLoading, isLoadingMore, pagination.page, pagination.totalPages]);
+
+  // Infinite scroll hook
+  const hasMore = pagination.page < pagination.totalPages;
+  const { ref: loadMoreRef } = useInfiniteScroll(loadMoreTemplates, {
+    enabled: hasMore && !storeIsLoading && !isLoadingMore && !isInitialLoading,
+  });
 
   // Initial fetch - só executa uma vez
   useEffect(() => {
@@ -281,29 +300,17 @@ export default function CommunityPage() {
             ))}
           </div>
 
-          {/* Load more */}
-          {pagination.page < pagination.totalPages && (
-            <div className="flex justify-center pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const state = useCommunityStore.getState();
-                  state.setPagination({ ...state.pagination, page: state.pagination.page + 1 });
-                  state.fetchTemplates(false);
-                }}
-                disabled={storeIsLoading}
-              >
-                {storeIsLoading ? "Loading..." : "Load More"}
-              </Button>
-            </div>
-          )}
-
-          {/* End message */}
-          {pagination.page >= pagination.totalPages && templates.length > 0 && (
-            <p className="text-center text-sm text-muted-foreground py-4">
-              You've seen all {pagination.total} templates
-            </p>
-          )}
+          {/* Infinite scroll sentinel */}
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            {isLoadingMore && (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            )}
+            {!hasMore && templates.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                You've seen all {pagination.total} templates
+              </p>
+            )}
+          </div>
         </>
       )}
 

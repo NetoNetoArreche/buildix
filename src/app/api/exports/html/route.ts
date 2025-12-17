@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
+// Admin bypass - same email used in ai/stream
+const ADMIN_EMAIL = "helioarreche@gmail.com";
+
 /**
  * POST /api/exports/html
  * Check and increment HTML export usage
@@ -14,6 +17,16 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+    const isAdmin = session.user.email === ADMIN_EMAIL;
+
+    // Admin bypass - skip usage check and increment
+    if (isAdmin) {
+      console.log(`[HTML Export] Admin bypass: export without usage increment`);
+      return NextResponse.json({
+        success: true,
+        usage: { used: 0, limit: -1, remaining: Infinity },
+      });
+    }
 
     // Check usage limits for HTML exports
     const { allowed, usage, plan } = await canUseFeature(userId, "htmlExports");

@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
+// Admin bypass - same email used in ai/stream
+const ADMIN_EMAIL = "helioarreche@gmail.com";
+
 // Initialize S3 client
 const getS3Client = () => {
   if (
@@ -92,14 +95,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check usage limits for images
-    const { allowed, usage, plan } = await canUseFeature(user.id, "images");
-    if (!allowed) {
-      const message = getUsageLimitMessage("images", plan);
-      return NextResponse.json(
-        { error: message, usageLimit: true, usage, plan, images: [] },
-        { status: 429 }
-      );
+    // Admin bypass - no usage limits for admin
+    const isAdmin = user?.email === ADMIN_EMAIL;
+
+    // Check usage limits for images (skip for admin)
+    if (!isAdmin) {
+      const { allowed, usage, plan } = await canUseFeature(user.id, "images");
+      if (!allowed) {
+        const message = getUsageLimitMessage("images", plan);
+        return NextResponse.json(
+          { error: message, usageLimit: true, usage, plan, images: [] },
+          { status: 429 }
+        );
+      }
     }
 
     // Use GEMINI_API_KEY for image generation
@@ -204,9 +212,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Increment usage for successful image generation
-    await incrementUsage(user.id, "images", images.length);
-    console.log(`[AI Generate] Usage incremented: ${images.length} images for user ${user.id}`);
+    // Increment usage for successful image generation (skip for admin)
+    if (!isAdmin) {
+      await incrementUsage(user.id, "images", images.length);
+      console.log(`[AI Generate] Usage incremented: ${images.length} images for user ${user.id}`);
+    } else {
+      console.log(`[AI Generate] Admin bypass: ${images.length} images generated without usage increment`);
+    }
 
     return NextResponse.json({ images });
   } catch (error) {

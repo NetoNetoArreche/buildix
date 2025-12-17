@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
+// Admin bypass - same email used in ai/stream
+const ADMIN_EMAIL = "helioarreche@gmail.com";
+
 // Configure body size limit for large HTML with base64 images
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -20,28 +23,32 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+    const isAdmin = session.user.email === ADMIN_EMAIL;
 
-    // Check usage limits for Figma exports
-    const { allowed, usage, plan } = await canUseFeature(userId, "figmaExports");
-    if (!allowed) {
-      const message = getUsageLimitMessage("figmaExports", plan);
-      return NextResponse.json(
-        { error: message, usageLimit: true, usage, plan },
-        { status: 429 }
-      );
-    }
+    // Admin bypass - skip usage check
+    if (!isAdmin) {
+      // Check usage limits for Figma exports
+      const { allowed, usage, plan } = await canUseFeature(userId, "figmaExports");
+      if (!allowed) {
+        const message = getUsageLimitMessage("figmaExports", plan);
+        return NextResponse.json(
+          { error: message, usageLimit: true, usage, plan },
+          { status: 429 }
+        );
+      }
 
-    // Check if user is on FREE plan (no Figma exports allowed)
-    if (plan === "FREE") {
-      return NextResponse.json(
-        {
-          error: "O plano Free não inclui exports para Figma. Faça upgrade para acessar esta funcionalidade!",
-          usageLimit: true,
-          usage,
-          plan
-        },
-        { status: 403 }
-      );
+      // Check if user is on FREE plan (no Figma exports allowed)
+      if (plan === "FREE") {
+        return NextResponse.json(
+          {
+            error: "O plano Free não inclui exports para Figma. Faça upgrade para acessar esta funcionalidade!",
+            usageLimit: true,
+            usage,
+            plan
+          },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();
@@ -86,9 +93,13 @@ export async function POST(request: NextRequest) {
     // The API returns the clipboard data as text/html
     const clipboardData = await response.text();
 
-    // Increment usage on successful export
-    await incrementUsage(userId, "figmaExports");
-    console.log(`[Figma Export] Usage incremented for user ${userId}`);
+    // Increment usage on successful export (skip for admin)
+    if (!isAdmin) {
+      await incrementUsage(userId, "figmaExports");
+      console.log(`[Figma Export] Usage incremented for user ${userId}`);
+    } else {
+      console.log(`[Figma Export] Admin bypass: export without usage increment`);
+    }
 
     return NextResponse.json({
       success: true,

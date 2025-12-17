@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const CACHE_HEADERS = {
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+};
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const query = searchParams.get("query") || "background";
@@ -35,8 +39,6 @@ export async function GET(req: NextRequest) {
     }
 
     const apiUrl = `https://api.unsplash.com/search/photos?${params}`;
-    console.log("[Unsplash] Fetching:", apiUrl);
-    console.log("[Unsplash] Key length:", accessKey.length);
 
     const response = await fetch(apiUrl, {
       headers: {
@@ -65,7 +67,7 @@ export async function GET(req: NextRequest) {
       source: "unsplash",
     }));
 
-    return NextResponse.json({ images, total: data.total });
+    return NextResponse.json({ images, total: data.total }, { headers: CACHE_HEADERS });
   } catch (error) {
     console.error("Unsplash API error:", error);
     return NextResponse.json(

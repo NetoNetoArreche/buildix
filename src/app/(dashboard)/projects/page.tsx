@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,34 +55,70 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [renameProject, setRenameProject] = useState<Project | null>(null);
   const [newProjectName, setNewProjectName] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
 
-  // Fetch projects from API
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await fetch("/api/projects");
-        if (response.ok) {
-          const data = await response.json();
-          setProjects(data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch projects:", error);
-      } finally {
-        setIsLoading(false);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  // Fetch projects from API with pagination
+  const fetchProjects = useCallback(async (pageNum: number, reset: boolean = false) => {
+    try {
+      if (reset) {
+        setIsLoading(true);
+      } else {
+        setIsLoadingMore(true);
       }
-    };
 
-    fetchProjects();
-  }, []);
+      const params = new URLSearchParams({
+        page: pageNum.toString(),
+        limit: "12",
+      });
+      if (debouncedSearch) {
+        params.set("search", debouncedSearch);
+      }
 
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      const response = await fetch(`/api/projects?${params}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (reset) {
+          setProjects(data.projects);
+        } else {
+          setProjects((prev) => [...prev, ...data.projects]);
+        }
+        setHasMore(data.pagination.hasMore);
+        setPage(pageNum);
+      }
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  }, [debouncedSearch]);
+
+  // Initial fetch and search reset
+  useEffect(() => {
+    setPage(1);
+    fetchProjects(1, true);
+  }, [debouncedSearch]);
+
+  // Load more handler for infinite scroll
+  const loadMore = useCallback(() => {
+    if (!isLoadingMore && hasMore) {
+      fetchProjects(page + 1, false);
+    }
+  }, [fetchProjects, page, isLoadingMore, hasMore]);
+
+  // Infinite scroll hook
+  const { ref: loadMoreRef } = useInfiniteScroll(loadMore, {
+    enabled: hasMore && !isLoading && !isLoadingMore,
+  });
 
   const handleNewProject = () => {
     router.push("/editor/new");
@@ -229,7 +267,7 @@ export default function ProjectsPage() {
       </div>
 
       {/* Projects Grid/List */}
-      {filteredProjects.length === 0 ? (
+      {projects.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16">
           <FolderOpen className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-medium">No projects found</h3>
@@ -247,7 +285,7 @@ export default function ProjectsPage() {
         </div>
       ) : viewMode === "grid" ? (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProjects.map((project) => (
+          {projects.map((project) => (
             <ProjectCard
               key={project.id}
               project={project}
@@ -260,7 +298,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filteredProjects.map((project) => (
+          {projects.map((project) => (
             <ProjectListItem
               key={project.id}
               project={project}
@@ -270,6 +308,18 @@ export default function ProjectsPage() {
               onRename={() => openRenameDialog(project)}
             />
           ))}
+        </div>
+      )}
+
+      {/* Infinite scroll sentinel and loading indicator */}
+      {projects.length > 0 && (
+        <div ref={loadMoreRef} className="flex justify-center py-8">
+          {isLoadingMore && (
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          )}
+          {!hasMore && projects.length > 0 && (
+            <p className="text-sm text-muted-foreground">All projects loaded</p>
+          )}
         </div>
       )}
 

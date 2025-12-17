@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,13 +74,20 @@ export default function AssetsPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // My Assets state
+  // My Assets state with pagination
   const [myAssets, setMyAssets] = useState<Asset[]>([]);
   const [isLoadingMyAssets, setIsLoadingMyAssets] = useState(true);
+  const [isLoadingMoreMyAssets, setIsLoadingMoreMyAssets] = useState(false);
+  const [myAssetsPage, setMyAssetsPage] = useState(1);
+  const [hasMoreMyAssets, setHasMoreMyAssets] = useState(true);
+  const [totalMyAssets, setTotalMyAssets] = useState(0);
 
-  // Gallery state
+  // Gallery state with pagination
   const [galleryAssets, setGalleryAssets] = useState<Asset[]>([]);
   const [isLoadingGallery, setIsLoadingGallery] = useState(true);
+  const [isLoadingMoreGallery, setIsLoadingMoreGallery] = useState(false);
+  const [galleryPage, setGalleryPage] = useState(1);
+  const [hasMoreGallery, setHasMoreGallery] = useState(true);
 
   // Upload state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
@@ -90,49 +99,110 @@ export default function AssetsPage() {
   // Delete state
   const [deleteAsset, setDeleteAsset] = useState<Asset | null>(null);
 
-  // Fetch my assets
-  useEffect(() => {
-    fetchMyAssets();
-  }, []);
+  const debouncedSearch = useDebounce(searchQuery, 300);
 
-  // Fetch gallery assets
-  useEffect(() => {
-    fetchGalleryAssets();
-  }, [activeCategory]);
-
-  const fetchMyAssets = async () => {
-    setIsLoadingMyAssets(true);
+  // Fetch my assets with pagination
+  const fetchMyAssets = useCallback(async (pageNum: number, reset: boolean = false) => {
     try {
-      const response = await fetch("/api/images/my-images");
+      if (reset) {
+        setIsLoadingMyAssets(true);
+      } else {
+        setIsLoadingMoreMyAssets(true);
+      }
+
+      const params = new URLSearchParams({
+        page: pageNum.toString(),
+        limit: "20",
+      });
+
+      const response = await fetch(`/api/images/my-images?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setMyAssets(data.images || []);
+        if (reset) {
+          setMyAssets(data.images || []);
+        } else {
+          setMyAssets((prev) => [...prev, ...(data.images || [])]);
+        }
+        setHasMoreMyAssets(data.pagination?.hasMore ?? false);
+        setTotalMyAssets(data.pagination?.total ?? 0);
+        setMyAssetsPage(pageNum);
       }
     } catch (error) {
       console.error("Failed to fetch my assets:", error);
     } finally {
       setIsLoadingMyAssets(false);
+      setIsLoadingMoreMyAssets(false);
     }
-  };
+  }, []);
 
-  const fetchGalleryAssets = async () => {
-    setIsLoadingGallery(true);
+  // Fetch gallery assets with pagination
+  const fetchGalleryAssets = useCallback(async (pageNum: number, reset: boolean = false) => {
     try {
-      const params = new URLSearchParams();
-      if (activeCategory !== "all") {
-        params.append("category", activeCategory);
+      if (reset) {
+        setIsLoadingGallery(true);
+      } else {
+        setIsLoadingMoreGallery(true);
       }
+
+      const params = new URLSearchParams({
+        page: pageNum.toString(),
+        limit: "20",
+      });
+      if (activeCategory !== "all") {
+        params.set("category", activeCategory);
+      }
+
       const response = await fetch(`/api/images/buildix?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setGalleryAssets(data.images || []);
+        if (reset) {
+          setGalleryAssets(data.images || []);
+        } else {
+          setGalleryAssets((prev) => [...prev, ...(data.images || [])]);
+        }
+        setHasMoreGallery(data.pagination?.hasMore ?? false);
+        setGalleryPage(pageNum);
       }
     } catch (error) {
       console.error("Failed to fetch gallery:", error);
     } finally {
       setIsLoadingGallery(false);
+      setIsLoadingMoreGallery(false);
     }
-  };
+  }, [activeCategory]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchMyAssets(1, true);
+  }, []);
+
+  // Fetch gallery when category changes
+  useEffect(() => {
+    setGalleryPage(1);
+    fetchGalleryAssets(1, true);
+  }, [activeCategory]);
+
+  // Load more handlers
+  const loadMoreMyAssets = useCallback(() => {
+    if (!isLoadingMoreMyAssets && hasMoreMyAssets) {
+      fetchMyAssets(myAssetsPage + 1, false);
+    }
+  }, [fetchMyAssets, myAssetsPage, isLoadingMoreMyAssets, hasMoreMyAssets]);
+
+  const loadMoreGallery = useCallback(() => {
+    if (!isLoadingMoreGallery && hasMoreGallery) {
+      fetchGalleryAssets(galleryPage + 1, false);
+    }
+  }, [fetchGalleryAssets, galleryPage, isLoadingMoreGallery, hasMoreGallery]);
+
+  // Infinite scroll hooks
+  const { ref: myAssetsLoadMoreRef } = useInfiniteScroll(loadMoreMyAssets, {
+    enabled: hasMoreMyAssets && !isLoadingMyAssets && !isLoadingMoreMyAssets && activeTab === "my-assets",
+  });
+
+  const { ref: galleryLoadMoreRef } = useInfiniteScroll(loadMoreGallery, {
+    enabled: hasMoreGallery && !isLoadingGallery && !isLoadingMoreGallery && activeTab === "gallery",
+  });
 
   // File upload handlers
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,7 +250,7 @@ export default function AssetsPage() {
       }
 
       // Refresh my assets
-      await fetchMyAssets();
+      await fetchMyAssets(1, true);
       setSelectedFiles([]);
       setIsUploadOpen(false);
     } catch (error) {
@@ -244,9 +314,9 @@ export default function AssetsPage() {
           <TabsTrigger value="my-assets" className="flex items-center gap-2">
             <FolderOpen className="h-4 w-4" />
             My Assets
-            {myAssets.length > 0 && (
+            {totalMyAssets > 0 && (
               <span className="ml-1 text-xs text-muted-foreground">
-                ({myAssets.length})
+                ({totalMyAssets})
               </span>
             )}
           </TabsTrigger>
@@ -336,6 +406,18 @@ export default function AssetsPage() {
               ))}
             </div>
           )}
+
+          {/* Infinite scroll sentinel for My Assets */}
+          {filteredMyAssets.length > 0 && (
+            <div ref={myAssetsLoadMoreRef} className="flex justify-center py-8">
+              {isLoadingMoreMyAssets && (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              )}
+              {!hasMoreMyAssets && filteredMyAssets.length > 0 && (
+                <p className="text-sm text-muted-foreground">All assets loaded</p>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         {/* Gallery Tab */}
@@ -387,6 +469,18 @@ export default function AssetsPage() {
                   onCopy={copyToClipboard}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Infinite scroll sentinel for Gallery */}
+          {filteredGalleryAssets.length > 0 && (
+            <div ref={galleryLoadMoreRef} className="flex justify-center py-8">
+              {isLoadingMoreGallery && (
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              )}
+              {!hasMoreGallery && filteredGalleryAssets.length > 0 && (
+                <p className="text-sm text-muted-foreground">All images loaded</p>
+              )}
             </div>
           )}
         </TabsContent>
