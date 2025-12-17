@@ -21,15 +21,19 @@ import { cn } from "@/lib/utils";
 type Tab = "profile" | "preferences";
 
 export default function SettingsPage() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
+
+  // Set initial avatar from session
+  const displayAvatar = currentAvatar || session?.user?.image || undefined;
 
   if (status === "loading") {
     return (
@@ -116,8 +120,8 @@ export default function SettingsPage() {
         throw new Error("Failed to update avatar");
       }
 
-      // Step 4: Update session to reflect new avatar
-      await update();
+      // Step 4: Update local state to show new avatar immediately
+      setCurrentAvatar(publicUrl);
 
       // Close dialog and reset
       setIsAvatarDialogOpen(false);
@@ -145,8 +149,8 @@ export default function SettingsPage() {
         throw new Error("Failed to remove avatar");
       }
 
-      // Update session to reflect removed avatar
-      await update();
+      // Update local state to remove avatar immediately
+      setCurrentAvatar("");
 
       setIsAvatarDialogOpen(false);
     } catch (error) {
@@ -203,7 +207,7 @@ export default function SettingsPage() {
                 <div className="relative group">
                   <Avatar className="h-20 w-20">
                     <AvatarImage
-                      src={session?.user?.image || undefined}
+                      src={displayAvatar}
                       alt={session?.user?.name || "User"}
                     />
                     <AvatarFallback className="text-xl">{initials}</AvatarFallback>
@@ -332,7 +336,7 @@ export default function SettingsPage() {
             <div className="flex justify-center">
               <Avatar className="h-32 w-32">
                 <AvatarImage
-                  src={avatarPreview || session?.user?.image || undefined}
+                  src={avatarPreview || displayAvatar}
                   alt="Avatar preview"
                 />
                 <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
@@ -372,7 +376,7 @@ export default function SettingsPage() {
                   "Upload"
                 )}
               </Button>
-              {session?.user?.image && (
+              {displayAvatar && (
                 <Button
                   variant="outline"
                   className="text-destructive hover:text-destructive"
