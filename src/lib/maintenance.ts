@@ -8,7 +8,7 @@ let maintenanceCache: {
   timestamp: number;
 } | null = null;
 
-const CACHE_TTL = 30 * 1000; // 30 segundos
+const CACHE_TTL = 5 * 1000; // 5 segundos
 
 export interface MaintenanceStatus {
   enabled: boolean;
