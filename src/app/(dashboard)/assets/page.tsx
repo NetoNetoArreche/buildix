@@ -18,6 +18,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useInfiniteScroll } from "@/hooks/useInfiniteScroll";
 import { useDebounce } from "@/hooks/useDebounce";
 import {
@@ -72,6 +80,7 @@ export default function AssetsPage() {
   const [activeTab, setActiveTab] = useState<"my-assets" | "gallery">("my-assets");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
+  const [myAssetsCategory, setMyAssetsCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // My Assets state with pagination
@@ -92,6 +101,7 @@ export default function AssetsPage() {
   // Upload state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadCategory, setUploadCategory] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -114,6 +124,9 @@ export default function AssetsPage() {
         page: pageNum.toString(),
         limit: "20",
       });
+      if (myAssetsCategory !== "all") {
+        params.set("category", myAssetsCategory);
+      }
 
       const response = await fetch(`/api/images/my-images?${params}`);
       if (response.ok) {
@@ -133,7 +146,7 @@ export default function AssetsPage() {
       setIsLoadingMyAssets(false);
       setIsLoadingMoreMyAssets(false);
     }
-  }, []);
+  }, [myAssetsCategory]);
 
   // Fetch gallery assets with pagination
   const fetchGalleryAssets = useCallback(async (pageNum: number, reset: boolean = false) => {
@@ -171,10 +184,11 @@ export default function AssetsPage() {
     }
   }, [activeCategory]);
 
-  // Initial fetch
+  // Initial fetch and refetch when myAssetsCategory changes
   useEffect(() => {
+    setMyAssetsPage(1);
     fetchMyAssets(1, true);
-  }, []);
+  }, [myAssetsCategory]);
 
   // Fetch gallery when category changes
   useEffect(() => {
@@ -240,18 +254,49 @@ export default function AssetsPage() {
 
     try {
       for (const file of selectedFiles) {
-        const formData = new FormData();
-        formData.append("file", file);
+        // Step 1: Get presigned URL
+        const presignedResponse = await fetch(
+          `/api/images/upload?fileName=${encodeURIComponent(file.name)}&fileType=${encodeURIComponent(file.type)}`
+        );
 
+        if (!presignedResponse.ok) {
+          throw new Error("Failed to get upload URL");
+        }
+
+        const { presignedUrl, key, publicUrl } = await presignedResponse.json();
+
+        // Step 2: Upload directly to S3
+        const uploadResponse = await fetch(presignedUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload to S3");
+        }
+
+        // Step 3: Confirm upload and save to database with category
         await fetch("/api/images/upload", {
           method: "POST",
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            publicUrl,
+            fileName: file.name,
+            fileType: file.type,
+            fileSize: file.size,
+            category: uploadCategory !== "all" ? uploadCategory : null,
+          }),
         });
       }
 
       // Refresh my assets
       await fetchMyAssets(1, true);
       setSelectedFiles([]);
+      setUploadCategory("all");
       setIsUploadOpen(false);
     } catch (error) {
       console.error("Upload failed:", error);
@@ -360,7 +405,21 @@ export default function AssetsPage() {
         </div>
 
         {/* My Assets Tab */}
-        <TabsContent value="my-assets" className="mt-6">
+        <TabsContent value="my-assets" className="mt-6 space-y-4">
+          {/* Categories for My Assets */}
+          <div className="flex flex-wrap gap-2">
+            {GALLERY_CATEGORIES.map((category) => (
+              <Button
+                key={category.id}
+                variant={myAssetsCategory === category.id ? "secondary" : "outline"}
+                size="sm"
+                onClick={() => setMyAssetsCategory(category.id)}
+              >
+                {category.name}
+              </Button>
+            ))}
+          </div>
+
           {isLoadingMyAssets ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -565,6 +624,23 @@ export default function AssetsPage() {
                 </div>
               </div>
             )}
+
+            {/* Category Select */}
+            <div className="space-y-2">
+              <Label htmlFor="upload-category">Category (optional)</Label>
+              <Select value={uploadCategory} onValueChange={setUploadCategory}>
+                <SelectTrigger id="upload-category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {GALLERY_CATEGORIES.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             <Button
               onClick={handleUpload}

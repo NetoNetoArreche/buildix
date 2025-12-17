@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { key, publicUrl, fileName, fileType, fileSize } = await req.json();
+    const { key, publicUrl, fileName, fileType, fileSize, category } = await req.json();
 
     if (!key || !publicUrl) {
       return NextResponse.json(
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     const userId = user.id;
 
     try {
-      // Save to database
+      // Save to database with optional category
       await prisma.userImage.create({
         data: {
           userId,
@@ -119,6 +119,7 @@ export async function POST(req: NextRequest) {
           filename: fileName || "uploaded-image",
           mimeType: fileType || "image/jpeg",
           size: fileSize || 0,
+          category: category && category !== "all" ? category : null,
         },
       });
     } catch (dbError) {

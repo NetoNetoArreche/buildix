@@ -193,11 +193,13 @@ model UserImage {
   size      Int      // File size in bytes
   width     Int?     // Image width
   height    Int?     // Image height
+  category  String?  // Category for filtering: abstract, gradient, minimal, nature, technology, business, lifestyle
   createdAt DateTime @default(now())
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, category])
   @@map("user_images")
 }
 

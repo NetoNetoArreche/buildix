@@ -6,7 +6,7 @@ const CACHE_HEADERS = {
   "Cache-Control": "private, s-maxage=60, stale-while-revalidate=300",
 };
 
-// GET - List user's uploaded images with pagination
+// GET - List user's uploaded images with pagination and category filter
 export async function GET(req: NextRequest) {
   try {
     // Get authenticated user
@@ -16,21 +16,28 @@ export async function GET(req: NextRequest) {
     }
     const userId = user.id;
 
-    // Pagination params
+    // Pagination and filter params
     const { searchParams } = new URL(req.url);
     const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "20")));
+    const category = searchParams.get("category");
     const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: { userId: string; category?: string } = { userId };
+    if (category && category !== "all") {
+      where.category = category;
+    }
 
     try {
       const [dbImages, total] = await Promise.all([
         prisma.userImage.findMany({
-          where: { userId },
+          where,
           orderBy: { createdAt: "desc" },
           skip,
           take: limit,
         }),
-        prisma.userImage.count({ where: { userId } }),
+        prisma.userImage.count({ where }),
       ]);
 
       const images = dbImages.map((img) => ({
@@ -38,6 +45,7 @@ export async function GET(req: NextRequest) {
         url: img.url,
         thumb: img.url, // Use same URL for thumb for now
         alt: img.filename,
+        category: img.category || undefined,
         source: "my-images",
       }));
 
