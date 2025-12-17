@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { User, Palette, Loader2, Save, Globe, Camera, Trash2 } from "lucide-react";
+import { User, Palette, Loader2, Save, Globe, Camera, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LanguageSelector } from "@/components/shared/language-selector";
+import { Slider } from "@/components/ui/slider";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import Cropper, { Area } from "react-easy-crop";
 
 type Tab = "profile" | "preferences";
 
@@ -28,6 +30,9 @@ export default function SettingsPage() {
   const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [currentAvatar, setCurrentAvatar] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
@@ -54,6 +59,63 @@ export default function SettingsPage() {
     .join("")
     .toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U";
 
+  const onCropComplete = useCallback(
+    (croppedArea: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+    },
+    []
+  );
+
+  const createCroppedImage = async (
+    imageSrc: string,
+    pixelCrop: Area
+  ): Promise<Blob> => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise((resolve) => {
+      image.onload = resolve;
+    });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    if (!ctx) {
+      throw new Error("No 2d context");
+    }
+
+    // Set canvas size to the cropped area
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    // Draw the cropped image
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    // Return as blob
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error("Canvas is empty"));
+          }
+        },
+        "image/jpeg",
+        0.95
+      );
+    });
+  };
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -74,20 +136,28 @@ export default function SettingsPage() {
     const reader = new FileReader();
     reader.onload = () => {
       setAvatarPreview(reader.result as string);
+      // Reset crop settings
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
     };
     reader.readAsDataURL(file);
   };
 
   const handleUploadAvatar = async () => {
-    const file = fileInputRef.current?.files?.[0];
-    if (!file) return;
+    if (!avatarPreview || !croppedAreaPixels) return;
 
     setIsUploadingAvatar(true);
 
     try {
-      // Step 1: Get presigned URL
+      // Step 1: Create cropped image blob
+      const croppedImageBlob = await createCroppedImage(
+        avatarPreview,
+        croppedAreaPixels
+      );
+
+      // Step 2: Get presigned URL
       const presignedResponse = await fetch(
-        `/api/images/upload?fileName=${encodeURIComponent(file.name)}&fileType=${encodeURIComponent(file.type)}`
+        `/api/images/upload?fileName=avatar.jpg&fileType=image/jpeg`
       );
 
       if (!presignedResponse.ok) {
@@ -96,12 +166,12 @@ export default function SettingsPage() {
 
       const { presignedUrl, publicUrl } = await presignedResponse.json();
 
-      // Step 2: Upload directly to S3
+      // Step 3: Upload cropped image directly to S3
       const uploadResponse = await fetch(presignedUrl, {
         method: "PUT",
-        body: file,
+        body: croppedImageBlob,
         headers: {
-          "Content-Type": file.type,
+          "Content-Type": "image/jpeg",
         },
       });
 
@@ -109,7 +179,7 @@ export default function SettingsPage() {
         throw new Error("Failed to upload image");
       }
 
-      // Step 3: Update avatar in database
+      // Step 4: Update avatar in database
       const avatarResponse = await fetch("/api/user/avatar", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -120,12 +190,14 @@ export default function SettingsPage() {
         throw new Error("Failed to update avatar");
       }
 
-      // Step 4: Update local state to show new avatar immediately
+      // Step 5: Update local state to show new avatar immediately
       setCurrentAvatar(publicUrl);
 
       // Close dialog and reset
       setIsAvatarDialogOpen(false);
       setAvatarPreview(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -332,20 +404,52 @@ export default function SettingsPage() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Preview */}
-            <div className="flex justify-center">
-              <Avatar className="h-32 w-32">
-                <AvatarImage
-                  src={avatarPreview || displayAvatar}
-                  alt="Avatar preview"
-                />
-                <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
-              </Avatar>
-            </div>
+            {/* Crop Area or Preview */}
+            {avatarPreview ? (
+              <div className="space-y-4">
+                {/* Cropper */}
+                <div className="relative h-64 w-full rounded-lg overflow-hidden bg-muted">
+                  <Cropper
+                    image={avatarPreview}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    cropShape="round"
+                    showGrid={false}
+                    onCropChange={setCrop}
+                    onCropComplete={onCropComplete}
+                    onZoomChange={setZoom}
+                  />
+                </div>
+
+                {/* Zoom Control */}
+                <div className="flex items-center gap-3">
+                  <ZoomOut className="h-4 w-4 text-muted-foreground" />
+                  <Slider
+                    value={[zoom]}
+                    onValueChange={(values) => setZoom(values[0])}
+                    min={1}
+                    max={3}
+                    step={0.1}
+                    className="flex-1"
+                  />
+                  <ZoomIn className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center">
+                <Avatar className="h-32 w-32">
+                  <AvatarImage src={displayAvatar} alt="Current avatar" />
+                  <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
+                </Avatar>
+              </div>
+            )}
 
             {/* File Input */}
             <div className="space-y-2">
-              <Label htmlFor="avatar-upload">Select image</Label>
+              <Label htmlFor="avatar-upload">
+                {avatarPreview ? "Choose different image" : "Select image"}
+              </Label>
               <Input
                 id="avatar-upload"
                 type="file"
