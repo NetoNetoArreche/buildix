@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { User, Palette, Loader2, Save, Globe, Camera, Trash2, ZoomIn, ZoomOut } from "lucide-react";
@@ -37,7 +37,33 @@ export default function SettingsPage() {
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
 
-  // Set initial avatar from session
+  // useCallback must be called before any conditional returns (Rules of Hooks)
+  const onCropComplete = useCallback(
+    (croppedArea: Area, croppedAreaPixels: Area) => {
+      setCroppedAreaPixels(croppedAreaPixels);
+    },
+    []
+  );
+
+  // Fetch avatar from database on mount
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        const response = await fetch("/api/user/avatar");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.avatarUrl) {
+            setCurrentAvatar(data.avatarUrl);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch avatar:", error);
+      }
+    };
+    fetchAvatar();
+  }, []);
+
+  // Set initial avatar from session or fetched data
   const displayAvatar = currentAvatar || session?.user?.image || undefined;
 
   if (status === "loading") {
@@ -58,13 +84,6 @@ export default function SettingsPage() {
     .map((n) => n[0])
     .join("")
     .toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U";
-
-  const onCropComplete = useCallback(
-    (croppedArea: Area, croppedAreaPixels: Area) => {
-      setCroppedAreaPixels(croppedAreaPixels);
-    },
-    []
-  );
 
   const createCroppedImage = async (
     imageSrc: string,
@@ -176,7 +195,7 @@ export default function SettingsPage() {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to upload image");
+        throw new Error("Failed to upload image to S3");
       }
 
       // Step 4: Update avatar in database

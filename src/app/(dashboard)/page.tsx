@@ -130,22 +130,19 @@ export default function CreatePage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch("/api/projects");
+        const response = await fetch("/api/projects?limit=3");
         if (response.ok) {
-          const projects = await response.json();
-          // Get the 3 most recent projects
-          const recent = projects
-            .sort((a: { updatedAt: string }, b: { updatedAt: string }) =>
-              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-            )
-            .slice(0, 3)
-            .map((p: { id: string; name: string; thumbnail?: string; updatedAt: string; pages?: { htmlContent?: string }[] }) => ({
-              id: p.id,
-              name: p.name,
-              thumbnail: p.thumbnail || null,
-              updatedAt: formatRelativeTime(new Date(p.updatedAt)),
-              pageHtml: p.pages?.[0]?.htmlContent || null,
-            }));
+          const data = await response.json();
+          // API returns { projects, pagination }
+          const projectsList = data.projects || [];
+          // Map to our format (already sorted by updatedAt desc from API)
+          const recent = projectsList.map((p: { id: string; name: string; thumbnail?: string; updatedAt: string; pages?: { htmlContent?: string }[] }) => ({
+            id: p.id,
+            name: p.name,
+            thumbnail: p.thumbnail || null,
+            updatedAt: formatRelativeTime(new Date(p.updatedAt)),
+            pageHtml: p.pages?.[0]?.htmlContent || null,
+          }));
           setRecentProjects(recent);
         }
       } catch (error) {

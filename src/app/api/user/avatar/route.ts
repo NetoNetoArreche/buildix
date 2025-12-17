@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
+// GET - Get user avatar
+export async function GET() {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { avatar: true },
+    });
+
+    return NextResponse.json({
+      avatarUrl: dbUser?.avatar || null,
+    });
+  } catch (error) {
+    console.error("Error fetching avatar:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch avatar" },
+      { status: 500 }
+    );
+  }
+}
+
 // PUT - Update user avatar
 export async function PUT(request: NextRequest) {
   try {
