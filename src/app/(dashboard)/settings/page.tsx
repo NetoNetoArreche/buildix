@@ -1,22 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { User, Settings, Palette, Loader2, Save, Globe } from "lucide-react";
+import { User, Palette, Loader2, Save, Globe, Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LanguageSelector } from "@/components/shared/language-selector";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type Tab = "profile" | "preferences";
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isAvatarDialogOpen, setIsAvatarDialogOpen] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const t = useTranslations("settings");
   const tCommon = useTranslations("common");
 
@@ -38,6 +49,113 @@ export default function SettingsPage() {
     .map((n) => n[0])
     .join("")
     .toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U";
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Image must be less than 5MB");
+      return;
+    }
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUploadAvatar = async () => {
+    const file = fileInputRef.current?.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+
+    try {
+      // Step 1: Get presigned URL
+      const presignedResponse = await fetch(
+        `/api/images/upload?fileName=${encodeURIComponent(file.name)}&fileType=${encodeURIComponent(file.type)}`
+      );
+
+      if (!presignedResponse.ok) {
+        throw new Error("Failed to get upload URL");
+      }
+
+      const { presignedUrl, publicUrl } = await presignedResponse.json();
+
+      // Step 2: Upload directly to S3
+      const uploadResponse = await fetch(presignedUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      // Step 3: Update avatar in database
+      const avatarResponse = await fetch("/api/user/avatar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatarUrl: publicUrl }),
+      });
+
+      if (!avatarResponse.ok) {
+        throw new Error("Failed to update avatar");
+      }
+
+      // Step 4: Update session to reflect new avatar
+      await update();
+
+      // Close dialog and reset
+      setIsAvatarDialogOpen(false);
+      setAvatarPreview(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      console.error("Error uploading avatar:", error);
+      alert("Failed to upload avatar. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    setIsUploadingAvatar(true);
+
+    try {
+      const response = await fetch("/api/user/avatar", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to remove avatar");
+      }
+
+      // Update session to reflect removed avatar
+      await update();
+
+      setIsAvatarDialogOpen(false);
+    } catch (error) {
+      console.error("Error removing avatar:", error);
+      alert("Failed to remove avatar. Please try again.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -80,20 +198,34 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              {/* Avatar Section */}
+              {/* Avatar Section with Edit Button */}
               <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage
-                    src={session?.user?.image || undefined}
-                    alt={session?.user?.name || "User"}
-                  />
-                  <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-                </Avatar>
+                <div className="relative group">
+                  <Avatar className="h-20 w-20">
+                    <AvatarImage
+                      src={session?.user?.image || undefined}
+                      alt={session?.user?.name || "User"}
+                    />
+                    <AvatarFallback className="text-xl">{initials}</AvatarFallback>
+                  </Avatar>
+                  <button
+                    onClick={() => setIsAvatarDialogOpen(true)}
+                    className="absolute inset-0 flex items-center justify-center rounded-full bg-black/50 opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <Camera className="h-6 w-6 text-white" />
+                  </button>
+                </div>
                 <div>
                   <p className="font-medium">{session?.user?.name || "User"}</p>
                   <p className="text-sm text-muted-foreground">
                     {session?.user?.email}
                   </p>
+                  <button
+                    onClick={() => setIsAvatarDialogOpen(true)}
+                    className="mt-1 text-sm text-[hsl(var(--buildix-primary))] hover:underline"
+                  >
+                    Change avatar
+                  </button>
                 </div>
               </div>
 
@@ -184,6 +316,76 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Avatar Upload Dialog */}
+      <Dialog open={isAvatarDialogOpen} onOpenChange={setIsAvatarDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Change Avatar</DialogTitle>
+            <DialogDescription>
+              Upload a new profile picture or remove the current one.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Preview */}
+            <div className="flex justify-center">
+              <Avatar className="h-32 w-32">
+                <AvatarImage
+                  src={avatarPreview || session?.user?.image || undefined}
+                  alt="Avatar preview"
+                />
+                <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
+              </Avatar>
+            </div>
+
+            {/* File Input */}
+            <div className="space-y-2">
+              <Label htmlFor="avatar-upload">Select image</Label>
+              <Input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                className="cursor-pointer"
+              />
+              <p className="text-xs text-muted-foreground">
+                JPG, PNG or GIF. Max 5MB.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+              <Button
+                variant="buildix"
+                className="flex-1"
+                disabled={!avatarPreview || isUploadingAvatar}
+                onClick={handleUploadAvatar}
+              >
+                {isUploadingAvatar ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload"
+                )}
+              </Button>
+              {session?.user?.image && (
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  disabled={isUploadingAvatar}
+                  onClick={handleRemoveAvatar}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

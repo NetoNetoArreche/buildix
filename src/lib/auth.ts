@@ -91,19 +91,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, account }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role || "user";
+        token.picture = (user as any).image; // Avatar from credentials login
       }
-      // Always refresh role from database on session update
-      if (trigger === "update" || !token.role) {
+      // For OAuth users or session updates, fetch avatar from database
+      if (account?.provider === "google" || trigger === "update" || !token.picture) {
         const dbUser = await prisma.user.findUnique({
           where: { id: token.id as string },
-          select: { role: true },
+          select: { role: true, avatar: true },
         });
         if (dbUser) {
           token.role = dbUser.role;
+          if (dbUser.avatar) {
+            token.picture = dbUser.avatar;
+          }
         }
       }
       return token;
@@ -112,6 +116,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.image = token.picture as string | undefined;
       }
       return session;
     },
