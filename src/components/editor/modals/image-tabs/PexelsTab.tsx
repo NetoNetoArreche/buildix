@@ -25,8 +25,8 @@ export function PexelsTab({
 
   const debouncedQuery = useDebounce(searchQuery, 500);
 
-  const fetchImages = useCallback(async (reset = false) => {
-    const currentPage = reset ? 1 : page;
+  const fetchImages = useCallback(async (reset = false, pageNum?: number) => {
+    const currentPage = reset ? 1 : (pageNum ?? page);
     setIsLoading(true);
 
     try {
@@ -62,11 +62,13 @@ export function PexelsTab({
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedQuery, color, aspectRatio, page]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, color, aspectRatio]);
 
   // Fetch on mount and when filters change
   useEffect(() => {
     fetchImages(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedQuery, color, aspectRatio]);
 
   const handleSelect = (image: ImageItem) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ImageGrid, ImageItem } from "../ImageGrid";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -12,6 +12,10 @@ interface BuildixGalleryTabProps {
   onSelect: (url: string) => void;
 }
 
+// Note: category can be "all", null, or a specific category name
+// - "all" or null means fetch all images (no category filter)
+// - any other value filters by that category
+
 export function BuildixGalleryTab({
   searchQuery,
   category,
@@ -22,20 +26,27 @@ export function BuildixGalleryTab({
   const [images, setImages] = useState<ImageItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const isFirstRender = useRef(true);
 
   const debouncedQuery = useDebounce(searchQuery, 500);
 
-  const fetchImages = useCallback(async () => {
+  const fetchImages = useCallback(async (categoryOverride?: string | null) => {
     setIsLoading(true);
 
     try {
       const params = new URLSearchParams();
 
+      // Always request a larger limit to show more images
+      params.set("limit", "50");
+
       if (debouncedQuery) {
         params.set("query", debouncedQuery);
       }
-      if (category) {
-        params.set("category", category);
+      // Use categoryOverride if provided, otherwise use category prop
+      // Don't set category param if null/undefined (will fetch all)
+      const categoryToUse = categoryOverride !== undefined ? categoryOverride : category;
+      if (categoryToUse && categoryToUse !== "all") {
+        params.set("category", categoryToUse);
       }
       if (color) {
         params.set("color", color);
@@ -44,8 +55,10 @@ export function BuildixGalleryTab({
         params.set("aspectRatio", aspectRatio);
       }
 
+      console.log("[BuildixGalleryTab] Fetching with params:", params.toString());
       const response = await fetch(`/api/images/buildix?${params}`);
       const data = await response.json();
+      console.log("[BuildixGalleryTab] Response:", data.images?.length, "images, pagination:", data.pagination);
 
       if (data.images) {
         setImages(data.images);
@@ -55,11 +68,24 @@ export function BuildixGalleryTab({
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedQuery, category, color, aspectRatio]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, color, aspectRatio]);
 
+  // Initial fetch on mount - load all images
   useEffect(() => {
-    fetchImages();
-  }, [fetchImages]);
+    fetchImages("all"); // "all" means no category filter = all images
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Refetch when filters change (skip first render)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    fetchImages(category);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedQuery, category, color, aspectRatio]);
 
   const handleSelect = (image: ImageItem) => {
     setSelectedId(image.id);

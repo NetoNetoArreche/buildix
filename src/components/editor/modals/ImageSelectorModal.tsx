@@ -25,12 +25,14 @@ interface ImageSelectorModalProps {
 }
 
 const CATEGORIES = [
+  "all",
   "abstract",
-  "portrait",
-  "landscape",
-  "architecture",
-  "nature",
+  "gradient",
   "minimal",
+  "nature",
+  "technology",
+  "business",
+  "lifestyle",
 ];
 
 const COLORS = [
@@ -54,9 +56,9 @@ export function ImageSelectorModal({
 }: ImageSelectorModalProps) {
   const [activeTab, setActiveTab] = useState("buildix");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string | null>(
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string>(
     "all"
   );
 
@@ -125,14 +127,10 @@ export function ImageSelectorModal({
                     key={cat}
                     variant={selectedCategory === cat ? "secondary" : "outline"}
                     size="sm"
-                    onClick={() =>
-                      setSelectedCategory(
-                        selectedCategory === cat ? null : cat
-                      )
-                    }
+                    onClick={() => setSelectedCategory(cat)}
                     className="capitalize"
                   >
-                    {cat}
+                    {cat === "all" ? "All" : cat}
                   </Button>
                 ))}
               </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Upload, Loader2, Trash2, Pencil, ArrowLeft, Wand2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await fetch("/api/images/my-images");
@@ -46,11 +46,11 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchImages();
-  }, []);
+  }, [fetchImages]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

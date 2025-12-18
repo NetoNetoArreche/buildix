@@ -109,10 +109,16 @@ export default function AssetsPage() {
   // Delete state
   const [deleteAsset, setDeleteAsset] = useState<Asset | null>(null);
 
+  // Refs to track initial render and loaded state
+  const isFirstRenderMyAssets = useRef(true);
+  const isFirstRenderGallery = useRef(true);
+  const galleryLoaded = useRef(false);
+  const myAssetsLoaded = useRef(false);
+
   const debouncedSearch = useDebounce(searchQuery, 300);
 
   // Fetch my assets with pagination
-  const fetchMyAssets = useCallback(async (pageNum: number, reset: boolean = false) => {
+  const fetchMyAssets = useCallback(async (pageNum: number, reset: boolean = false, category?: string) => {
     try {
       if (reset) {
         setIsLoadingMyAssets(true);
@@ -120,12 +126,13 @@ export default function AssetsPage() {
         setIsLoadingMoreMyAssets(true);
       }
 
+      const categoryToUse = category ?? myAssetsCategory;
       const params = new URLSearchParams({
         page: pageNum.toString(),
         limit: "20",
       });
-      if (myAssetsCategory !== "all") {
-        params.set("category", myAssetsCategory);
+      if (categoryToUse !== "all") {
+        params.set("category", categoryToUse);
       }
 
       const response = await fetch(`/api/images/my-images?${params}`);
@@ -146,10 +153,11 @@ export default function AssetsPage() {
       setIsLoadingMyAssets(false);
       setIsLoadingMoreMyAssets(false);
     }
-  }, [myAssetsCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Fetch gallery assets with pagination
-  const fetchGalleryAssets = useCallback(async (pageNum: number, reset: boolean = false) => {
+  const fetchGalleryAssets = useCallback(async (pageNum: number, reset: boolean = false, category?: string) => {
     try {
       if (reset) {
         setIsLoadingGallery(true);
@@ -157,12 +165,13 @@ export default function AssetsPage() {
         setIsLoadingMoreGallery(true);
       }
 
+      const categoryToUse = category ?? activeCategory;
       const params = new URLSearchParams({
         page: pageNum.toString(),
         limit: "20",
       });
-      if (activeCategory !== "all") {
-        params.set("category", activeCategory);
+      if (categoryToUse !== "all") {
+        params.set("category", categoryToUse);
       }
 
       const response = await fetch(`/api/images/buildix?${params}`);
@@ -182,32 +191,59 @@ export default function AssetsPage() {
       setIsLoadingGallery(false);
       setIsLoadingMoreGallery(false);
     }
-  }, [activeCategory]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Initial fetch and refetch when myAssetsCategory changes
+  // Initial fetch on mount - only load my assets (the active tab)
   useEffect(() => {
+    fetchMyAssets(1, true, "all");
+    myAssetsLoaded.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fetch gallery when tab changes to gallery (lazy load)
+  useEffect(() => {
+    if (activeTab === "gallery" && !galleryLoaded.current) {
+      fetchGalleryAssets(1, true, "all");
+      galleryLoaded.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Refetch when myAssetsCategory changes (skip initial mount)
+  useEffect(() => {
+    if (isFirstRenderMyAssets.current) {
+      isFirstRenderMyAssets.current = false;
+      return;
+    }
     setMyAssetsPage(1);
-    fetchMyAssets(1, true);
-  }, [myAssetsCategory, fetchMyAssets]);
+    fetchMyAssets(1, true, myAssetsCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myAssetsCategory]);
 
-  // Fetch gallery when category changes
+  // Refetch when gallery category changes (skip initial mount)
   useEffect(() => {
+    if (isFirstRenderGallery.current) {
+      isFirstRenderGallery.current = false;
+      return;
+    }
     setGalleryPage(1);
-    fetchGalleryAssets(1, true);
-  }, [activeCategory, fetchGalleryAssets]);
+    fetchGalleryAssets(1, true, activeCategory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory]);
 
   // Load more handlers
   const loadMoreMyAssets = useCallback(() => {
     if (!isLoadingMoreMyAssets && hasMoreMyAssets) {
-      fetchMyAssets(myAssetsPage + 1, false);
+      fetchMyAssets(myAssetsPage + 1, false, myAssetsCategory);
     }
-  }, [fetchMyAssets, myAssetsPage, isLoadingMoreMyAssets, hasMoreMyAssets]);
+  }, [fetchMyAssets, myAssetsPage, isLoadingMoreMyAssets, hasMoreMyAssets, myAssetsCategory]);
 
   const loadMoreGallery = useCallback(() => {
     if (!isLoadingMoreGallery && hasMoreGallery) {
-      fetchGalleryAssets(galleryPage + 1, false);
+      fetchGalleryAssets(galleryPage + 1, false, activeCategory);
     }
-  }, [fetchGalleryAssets, galleryPage, isLoadingMoreGallery, hasMoreGallery]);
+  }, [fetchGalleryAssets, galleryPage, isLoadingMoreGallery, hasMoreGallery, activeCategory]);
 
   // Infinite scroll hooks
   const { ref: myAssetsLoadMoreRef } = useInfiniteScroll(loadMoreMyAssets, {
