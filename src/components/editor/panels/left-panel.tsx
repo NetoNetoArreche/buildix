@@ -771,9 +771,21 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
     }
   };
 
-  const handlePromptBuilderGenerate = (builderPrompt: string) => {
+  const handlePromptBuilderGenerate = (builderPrompt: string, refImage?: { data: string; mimeType: string }, newContentType?: string) => {
     // Just set the prompt in the input, don't execute
     setPrompt(builderPrompt);
+    // Set reference image if provided (from carousel tab)
+    if (refImage) {
+      setReferenceImage({
+        data: refImage.data,
+        mimeType: refImage.mimeType,
+        preview: `data:${refImage.mimeType};base64,${refImage.data}`,
+      });
+    }
+    // Set content type if provided (e.g., "instagram-carousel" from CarouselTab)
+    if (newContentType) {
+      setContentType(newContentType as ContentType);
+    }
     setShowPromptBuilder(false);
   };
 

@@ -366,8 +366,20 @@ export default function CreatePage() {
     router.push("/editor/new");
   };
 
-  const handlePromptBuilderGenerate = (generatedPrompt: string) => {
+  const handlePromptBuilderGenerate = (generatedPrompt: string, refImage?: { data: string; mimeType: string }, newContentType?: string) => {
     setPrompt(generatedPrompt);
+    // Set reference image if provided (from carousel tab)
+    if (refImage) {
+      setReferenceImage({
+        data: refImage.data,
+        mimeType: refImage.mimeType,
+        preview: `data:${refImage.mimeType};base64,${refImage.data}`,
+      });
+    }
+    // Set content type if provided (e.g., "instagram-carousel" from CarouselTab)
+    if (newContentType) {
+      setContentType(newContentType as ContentType);
+    }
     setShowPromptBuilder(false);
   };
 

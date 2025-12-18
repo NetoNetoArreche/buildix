@@ -36,7 +36,10 @@ import {
   ArrowRightLeft,
   Diamond,
   Infinity,
+  LayoutDashboard,
+  Images,
 } from "lucide-react";
+import { CarouselTab } from "./carousel-builder/CarouselTab";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUIStore } from "@/stores/uiStore";
@@ -47,7 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 
 interface PromptBuilderProps {
-  onGenerate: (prompt: string) => void;
+  onGenerate: (prompt: string, referenceImage?: { data: string; mimeType: string }, contentType?: string) => void;
   onClose?: () => void;
 }
 
@@ -578,6 +581,9 @@ function CollapsibleSection({ title, icon, children, defaultOpen = true }: Colla
 export function PromptBuilder({ onGenerate, onClose }: PromptBuilderProps) {
   const { closeModal } = useUIStore();
 
+  // Tab state - "landing" or "carousel"
+  const [activeTab, setActiveTab] = useState<"landing" | "carousel">("landing");
+
   const handleClose = () => {
     if (onClose) {
       onClose();
@@ -980,15 +986,17 @@ export function PromptBuilder({ onGenerate, onClose }: PromptBuilderProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleReset}
-              className="text-zinc-400 hover:text-white hover:bg-zinc-800"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              Reset
-            </Button>
+            {activeTab === "landing" && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -1000,7 +1008,43 @@ export function PromptBuilder({ onGenerate, onClose }: PromptBuilderProps) {
           </div>
         </div>
 
-        {/* Content */}
+        {/* Tab Navigation */}
+        <div className="flex border-b border-zinc-800 bg-zinc-900/50">
+          <button
+            onClick={() => setActiveTab("landing")}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 text-sm font-medium transition-all border-b-2",
+              activeTab === "landing"
+                ? "border-violet-500 text-violet-300 bg-violet-500/5"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+            )}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Landing Page
+          </button>
+          <button
+            onClick={() => setActiveTab("carousel")}
+            className={cn(
+              "flex items-center gap-2 px-6 py-3 text-sm font-medium transition-all border-b-2",
+              activeTab === "carousel"
+                ? "border-violet-500 text-violet-300 bg-violet-500/5"
+                : "border-transparent text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50"
+            )}
+          >
+            <Images className="h-4 w-4" />
+            Carousel
+            <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white rounded">
+              NEW
+            </span>
+          </button>
+        </div>
+
+        {/* Content - Conditional based on active tab */}
+        {activeTab === "carousel" ? (
+          <div className="flex-1 overflow-hidden">
+            <CarouselTab onGenerate={onGenerate} />
+          </div>
+        ) : (
         <div className="flex flex-1 overflow-hidden">
           {/* Left Panel - Options */}
           <div className="flex-1 overflow-hidden border-r border-zinc-800">
@@ -1985,6 +2029,7 @@ export function PromptBuilder({ onGenerate, onClose }: PromptBuilderProps) {
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

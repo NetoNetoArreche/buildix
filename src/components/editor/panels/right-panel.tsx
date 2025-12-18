@@ -2241,8 +2241,17 @@ function PromptTab({
 
       {promptBuilderOpen && (
         <PromptBuilder
-          onGenerate={(generatedPrompt) => {
+          onGenerate={(generatedPrompt, refImage, _newContentType) => {
             setPrompt(prompt + (prompt ? "\n" : "") + generatedPrompt);
+            // Set reference image if provided (from carousel tab)
+            if (refImage) {
+              setReferenceImage({
+                data: refImage.data,
+                mimeType: refImage.mimeType,
+                preview: `data:${refImage.mimeType};base64,${refImage.data}`,
+              });
+            }
+            // Note: contentType is not used in right-panel as it's for element-level revisions
             setPromptBuilderOpen(false);
           }}
           onClose={() => setPromptBuilderOpen(false)}
