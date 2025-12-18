@@ -188,13 +188,13 @@ export default function AssetsPage() {
   useEffect(() => {
     setMyAssetsPage(1);
     fetchMyAssets(1, true);
-  }, [myAssetsCategory]);
+  }, [myAssetsCategory, fetchMyAssets]);
 
   // Fetch gallery when category changes
   useEffect(() => {
     setGalleryPage(1);
     fetchGalleryAssets(1, true);
-  }, [activeCategory]);
+  }, [activeCategory, fetchGalleryAssets]);
 
   // Load more handlers
   const loadMoreMyAssets = useCallback(() => {
@@ -251,6 +251,7 @@ export default function AssetsPage() {
     if (selectedFiles.length === 0) return;
 
     setIsUploading(true);
+    const newAssets: Asset[] = [];
 
     try {
       for (const file of selectedFiles) {
@@ -279,7 +280,7 @@ export default function AssetsPage() {
         }
 
         // Step 3: Confirm upload and save to database with category
-        await fetch("/api/images/upload", {
+        const confirmResponse = await fetch("/api/images/upload", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -291,10 +292,26 @@ export default function AssetsPage() {
             category: uploadCategory !== "all" ? uploadCategory : null,
           }),
         });
+
+        if (confirmResponse.ok) {
+          // Add to local state immediately
+          newAssets.push({
+            id: key, // temporary ID
+            url: publicUrl,
+            thumb: publicUrl,
+            alt: file.name,
+            category: uploadCategory !== "all" ? uploadCategory : undefined,
+            source: "my-images",
+          });
+        }
       }
 
-      // Refresh my assets
-      await fetchMyAssets(1, true);
+      // Update state immediately with new assets
+      if (newAssets.length > 0) {
+        setMyAssets((prev) => [...newAssets, ...prev]);
+        setTotalMyAssets((prev) => prev + newAssets.length);
+      }
+
       setSelectedFiles([]);
       setUploadCategory("all");
       setIsUploadOpen(false);

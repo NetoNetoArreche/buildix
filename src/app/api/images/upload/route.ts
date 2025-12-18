@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
@@ -136,6 +136,77 @@ export async function POST(req: NextRequest) {
     console.error("Failed to confirm upload:", error);
     return NextResponse.json(
       { error: "Failed to confirm upload" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Delete image from S3 and database
+export async function DELETE(req: NextRequest) {
+  try {
+    // Get authenticated user
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Missing image id" },
+        { status: 400 }
+      );
+    }
+
+    // Find the image and verify ownership
+    const image = await prisma.userImage.findUnique({
+      where: { id },
+    });
+
+    if (!image) {
+      return NextResponse.json(
+        { error: "Image not found" },
+        { status: 404 }
+      );
+    }
+
+    if (image.userId !== user.id) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 403 }
+      );
+    }
+
+    // Delete from S3 if configured
+    const s3 = getS3Client();
+    if (s3 && process.env.AWS_S3_BUCKET && image.key) {
+      try {
+        const command = new DeleteObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET,
+          Key: image.key,
+        });
+        await s3.send(command);
+      } catch (s3Error) {
+        console.error("Failed to delete from S3:", s3Error);
+        // Continue to delete from database even if S3 fails
+      }
+    }
+
+    // Delete from database
+    await prisma.userImage.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "Image deleted successfully",
+    });
+  } catch (error) {
+    console.error("Failed to delete image:", error);
+    return NextResponse.json(
+      { error: "Failed to delete image" },
       { status: 500 }
     );
   }
