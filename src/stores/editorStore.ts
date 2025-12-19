@@ -108,6 +108,9 @@ interface EditorState {
   // Sync Actions
   syncHtmlFromIframe: () => void;
   addToHistory: (html: string) => void;
+
+  // Delete Actions
+  deleteSelectedElement: () => boolean;
 }
 
 const initialState = {
@@ -470,5 +473,111 @@ export const useEditorStore = create<EditorState>()(
           state.historyIndex = newHistory.length - 1;
         }
       }),
+
+    // Delete the currently selected element
+    deleteSelectedElement: () => {
+      const state = get();
+      const { selectedElementId, selectedElementData } = state;
+
+      if (!selectedElementId || !selectedElementData) {
+        console.log("[EditorStore] No element selected to delete");
+        return false;
+      }
+
+      // Prevent deleting protected elements
+      const protectedTags = ["html", "head", "body"];
+      if (protectedTags.includes(selectedElementData.tagName.toLowerCase())) {
+        console.log("[EditorStore] Cannot delete protected element:", selectedElementData.tagName);
+        return false;
+      }
+
+      // Get the iframe
+      const iframe = getPreviewIframe();
+      if (!iframe?.contentDocument) {
+        console.log("[EditorStore] No iframe found");
+        return false;
+      }
+
+      const doc = iframe.contentDocument;
+      const element = doc.querySelector(`[data-buildix-id="${selectedElementId}"]`);
+
+      if (!element) {
+        console.log("[EditorStore] Element not found in DOM:", selectedElementId);
+        return false;
+      }
+
+      // Remove the element from DOM
+      element.remove();
+      console.log("[EditorStore] Element deleted:", selectedElementId, selectedElementData.tagName);
+
+      // Sync the HTML from iframe to store (this will add to history)
+      // First, sync without history
+      const bodyClone = doc.body.cloneNode(true) as HTMLElement;
+
+      // Remove all buildix attributes and classes
+      bodyClone.querySelectorAll("[data-buildix-id]").forEach((el) => {
+        el.removeAttribute("data-buildix-id");
+        const currentClass = el.getAttribute("class") || "";
+        const cleanedClasses = currentClass
+          .split(/\s+/)
+          .filter((c) => !c.startsWith("buildix-"))
+          .join(" ")
+          .trim();
+        if (cleanedClasses) {
+          el.setAttribute("class", cleanedClasses);
+        } else {
+          el.removeAttribute("class");
+        }
+      });
+
+      // Remove buildix style tag and labels
+      bodyClone.querySelectorAll("#buildix-selection-styles, .buildix-element-label, .buildix-spacing-label, .buildix-action-bar").forEach((el) => el.remove());
+
+      // Get the full HTML document
+      const htmlEl = doc.documentElement.cloneNode(true) as HTMLElement;
+      const bodyInHtml = htmlEl.querySelector("body");
+      if (bodyInHtml) {
+        bodyInHtml.innerHTML = bodyClone.innerHTML;
+      }
+
+      // Remove buildix style from head too
+      htmlEl.querySelectorAll("#buildix-selection-styles").forEach((el) => el.remove());
+
+      // Remove duplicate Tailwind styles
+      const allStyles = htmlEl.querySelectorAll('style');
+      let foundFirstTailwind = false;
+      allStyles.forEach((style) => {
+        const content = style.textContent || '';
+        if (content.includes('tailwindcss') || content.includes('--tw-border-spacing') || content.includes('--tw-ring-offset-shadow')) {
+          if (foundFirstTailwind) {
+            style.remove();
+          } else {
+            foundFirstTailwind = true;
+          }
+        }
+      });
+
+      const newHtml = "<!DOCTYPE html>\n" + htmlEl.outerHTML;
+
+      // Update store with new HTML (add to history for undo support)
+      set((state) => {
+        state.htmlContent = newHtml;
+        state.selectedElementId = null;
+        state.selectedElementData = null;
+
+        // Add to history
+        if (newHtml !== state.history[state.historyIndex]) {
+          const newHistory = state.history.slice(0, state.historyIndex + 1);
+          newHistory.push(newHtml);
+          if (newHistory.length > state.maxHistorySize) {
+            newHistory.shift();
+          }
+          state.history = newHistory;
+          state.historyIndex = newHistory.length - 1;
+        }
+      });
+
+      return true;
+    },
   }))
 );

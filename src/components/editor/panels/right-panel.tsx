@@ -19,6 +19,7 @@ import {
   Paperclip,
   X,
   Image as ImageIcon,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -130,7 +131,7 @@ interface RightPanelProps {
 
 export function RightPanel({ projectId }: RightPanelProps) {
   const { rightPanelOpen, rightPanelWidth, togglePanel } = useUIStore();
-  const { selectedElementId, selectedElementData, viewMode, isGenerating, htmlContent, setHtmlContent, currentPage, insertAfterMode, insertAfterElementId, insertAfterElementHtml, setInsertAfterMode } = useEditorStore();
+  const { selectedElementId, selectedElementData, viewMode, isGenerating, htmlContent, setHtmlContent, currentPage, insertAfterMode, insertAfterElementId, insertAfterElementHtml, setInsertAfterMode, deleteSelectedElement } = useEditorStore();
   const { isOpen: canvasModeOpen } = useCanvasModeStore();
   const { generate } = useAI();
   const { savePage } = useProject();
@@ -482,19 +483,42 @@ export function RightPanel({ projectId }: RightPanelProps) {
             "Properties"
           )}
         </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => togglePanel("right")}
-            >
-              <PanelRightClose className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Hide Panel</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1">
+          {/* Delete Button - only show when element is selected */}
+          {selectedElementData && !canvasModeOpen && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => {
+                    const deleted = deleteSelectedElement();
+                    if (deleted) {
+                      console.log("[RightPanel] Element deleted successfully");
+                    }
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Delete Element (Del)</TooltipContent>
+            </Tooltip>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => togglePanel("right")}
+              >
+                <PanelRightClose className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Hide Panel</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Canvas Mode Section - shown when canvas mode is open */}

@@ -158,6 +158,7 @@ export function Canvas() {
     streamingContentType,
     setInsertAfterMode,
     backgroundAssets,
+    deleteSelectedElement,
   } = useEditorStore();
 
   // Early return for code mode - must be after ALL hooks
@@ -682,6 +683,7 @@ export function Canvas() {
           isStreaming={isStreaming}
           deviceMode={isMobileVersion ? "mobile" : deviceMode}
           onAddContentAfter={handleAddContentAfter}
+          onDeleteElement={deleteSelectedElement}
         />
       </div>
     </div>

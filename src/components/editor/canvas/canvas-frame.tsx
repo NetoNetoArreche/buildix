@@ -19,6 +19,7 @@ interface CanvasFrameProps {
   isStreaming?: boolean;
   deviceMode?: "desktop" | "tablet" | "mobile";
   onAddContentAfter?: (event: AddContentAfterEvent) => void;
+  onDeleteElement?: () => void;
 }
 
 export function CanvasFrame({
@@ -30,6 +31,7 @@ export function CanvasFrame({
   isStreaming = false,
   deviceMode = "desktop",
   onAddContentAfter,
+  onDeleteElement,
 }: CanvasFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -773,6 +775,57 @@ export function CanvasFrame({
       }
     }
   }, [selectedElementId, isDesignMode, onAddContentAfter, contentType]);
+
+  // Keyboard listener for Delete/Backspace to delete selected element
+  useEffect(() => {
+    if (!isDesignMode || !selectedElementId || !onDeleteElement) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check if Delete or Backspace was pressed
+      if (e.key === "Delete" || e.key === "Backspace") {
+        // Don't delete if focus is in an input, textarea, or contenteditable
+        const activeElement = document.activeElement;
+        if (
+          activeElement instanceof HTMLInputElement ||
+          activeElement instanceof HTMLTextAreaElement ||
+          activeElement?.getAttribute("contenteditable") === "true"
+        ) {
+          return;
+        }
+
+        // Also check inside the iframe
+        const iframe = iframeRef.current;
+        if (iframe?.contentDocument) {
+          const iframeActiveElement = iframe.contentDocument.activeElement;
+          if (
+            iframeActiveElement instanceof HTMLInputElement ||
+            iframeActiveElement instanceof HTMLTextAreaElement ||
+            iframeActiveElement?.getAttribute("contenteditable") === "true"
+          ) {
+            return;
+          }
+        }
+
+        e.preventDefault();
+        onDeleteElement();
+      }
+    };
+
+    // Listen on both the main document and the iframe
+    document.addEventListener("keydown", handleKeyDown);
+
+    const iframe = iframeRef.current;
+    if (iframe?.contentDocument) {
+      iframe.contentDocument.addEventListener("keydown", handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (iframe?.contentDocument) {
+        iframe.contentDocument.removeEventListener("keydown", handleKeyDown);
+      }
+    };
+  }, [isDesignMode, selectedElementId, onDeleteElement]);
 
   // Get iframe dimensions based on content type and device mode
   const getIframeDimensions = () => {
