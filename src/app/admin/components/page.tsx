@@ -66,21 +66,16 @@ interface UIComponent {
   updatedAt: string;
 }
 
-const CATEGORIES = [
-  "hero",
-  "feature",
-  "cta",
-  "pricing",
-  "testimonial",
-  "footer",
-  "navbar",
-  "card",
-  "form",
-  "gallery",
-];
+interface ComponentCategory {
+  id: string;
+  slug: string;
+  name: string;
+  isDefault: boolean;
+}
 
 export default function AdminComponentsPage() {
   const [components, setComponents] = useState<UIComponent[]>([]);
+  const [categories, setCategories] = useState<ComponentCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -89,6 +84,9 @@ export default function AdminComponentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [previewComponent, setPreviewComponent] = useState<UIComponent | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -102,7 +100,20 @@ export default function AdminComponentsPage() {
 
   useEffect(() => {
     fetchComponents();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/admin/component-categories");
+      if (response.ok) {
+        const data = await response.json();
+        setCategories(data.categories);
+      }
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
 
   const fetchComponents = async () => {
     try {
@@ -190,26 +201,6 @@ export default function AdminComponentsPage() {
     }
   };
 
-  const handleSeedComponents = async () => {
-    if (!confirm("Import all static components to the database? Existing components will be skipped.")) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/admin/components/seed", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        alert(`Imported: ${data.summary.created} created, ${data.summary.skipped} skipped`);
-        fetchComponents();
-      }
-    } catch (error) {
-      console.error("Failed to seed components:", error);
-    }
-  };
-
   const handleToggleActive = async (component: UIComponent) => {
     try {
       const response = await fetch(`/api/admin/components/${component.id}`, {
@@ -250,6 +241,41 @@ export default function AdminComponentsPage() {
       tags: "",
       isPro: false,
     });
+    setIsAddingCategory(false);
+    setNewCategoryName("");
+  };
+
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+
+    setIsSavingCategory(true);
+    try {
+      const response = await fetch("/api/admin/component-categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName.trim() }),
+      });
+
+      if (response.ok) {
+        const newCategory = await response.json();
+        setCategories((prev) => [...prev, newCategory]);
+        setFormData({ ...formData, category: newCategory.slug });
+        setIsAddingCategory(false);
+        setNewCategoryName("");
+      } else if (response.status === 409) {
+        // Category already exists
+        const data = await response.json();
+        setFormData({ ...formData, category: data.category.slug });
+        setIsAddingCategory(false);
+        setNewCategoryName("");
+      } else {
+        console.error("Failed to create category");
+      }
+    } catch (error) {
+      console.error("Failed to create category:", error);
+    } finally {
+      setIsSavingCategory(false);
+    }
   };
 
   const filteredComponents = components.filter((c) => {
@@ -278,22 +304,13 @@ export default function AdminComponentsPage() {
             Manage UI components available in the editor
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleSeedComponents}
-            variant="outline"
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-          >
-            Import Static Components
-          </Button>
-          <Button
-            onClick={() => setIsCreateOpen(true)}
-            className="bg-violet-600 hover:bg-violet-700"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Component
-          </Button>
-        </div>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="bg-violet-600 hover:bg-violet-700"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Component
+        </Button>
       </div>
 
       {/* Filters */}
@@ -313,9 +330,9 @@ export default function AdminComponentsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
-            {CATEGORIES.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            {categories.map((cat) => (
+              <SelectItem key={cat.slug} value={cat.slug}>
+                {cat.name}
               </SelectItem>
             ))}
           </SelectContent>
@@ -492,23 +509,72 @@ export default function AdminComponentsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat}>
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {isAddingCategory ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      placeholder="New category name"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleAddCategory();
+                        }
+                      }}
+                      autoFocus
+                      disabled={isSavingCategory}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddCategory}
+                      disabled={!newCategoryName.trim() || isSavingCategory}
+                    >
+                      {isSavingCategory ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Add"
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddingCategory(false);
+                        setNewCategoryName("");
+                      }}
+                      disabled={isSavingCategory}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={formData.category}
+                    onValueChange={(value) => {
+                      if (value === "__add_new__") {
+                        setIsAddingCategory(true);
+                      } else {
+                        setFormData({ ...formData, category: value });
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.slug} value={cat.slug}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__add_new__" className="text-violet-500 font-medium">
+                        + Add new category...
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

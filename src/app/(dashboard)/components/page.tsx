@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ComponentPreviewIframe } from "@/components/ui/component-preview-iframe";
 
 interface UIComponent {
   id: string;
@@ -166,27 +167,9 @@ export default function ComponentsPage() {
             >
               {/* Preview */}
               <div className="relative aspect-[4/3] bg-muted overflow-hidden">
-                <iframe
-                  srcDoc={`
-                    <!DOCTYPE html>
-                    <html>
-                      <head>
-                        <script src="https://cdn.tailwindcss.com"></script>
-                        <style>
-                          body {
-                            margin: 0;
-                            transform: scale(0.25);
-                            transform-origin: top left;
-                            width: 400%;
-                            height: 400%;
-                          }
-                        </style>
-                      </head>
-                      <body>${component.code}</body>
-                    </html>
-                  `}
-                  className="pointer-events-none h-full w-full"
-                  sandbox="allow-scripts"
+                <ComponentPreviewIframe
+                  code={component.code}
+                  className="h-full w-full"
                 />
 
                 {/* PRO Badge */}
@@ -277,20 +260,11 @@ export default function ComponentsPage() {
               )}
             </DialogTitle>
           </DialogHeader>
-          <div className="rounded-lg border overflow-hidden bg-white">
-            <iframe
-              srcDoc={`
-                <!DOCTYPE html>
-                <html>
-                  <head>
-                    <script src="https://cdn.tailwindcss.com"></script>
-                    <style>body { margin: 0; }</style>
-                  </head>
-                  <body>${previewComponent?.code || ""}</body>
-                </html>
-              `}
-              className="h-[500px] w-full"
-              sandbox="allow-scripts"
+          <div className="rounded-lg border bg-white h-[60vh] overflow-hidden">
+            <ComponentPreviewIframe
+              code={previewComponent?.code || ""}
+              className="h-full w-full"
+              fullWidth
             />
           </div>
           <div className="flex justify-end gap-2">

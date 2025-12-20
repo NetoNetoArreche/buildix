@@ -220,6 +220,17 @@ model BuildixGalleryImage {
   @@map("buildix_gallery_images")
 }
 
+// ComponentCategory - categories for UI components
+model ComponentCategory {
+  id        String   @id @default(cuid())
+  slug      String   @unique // "hero", "custom-section", etc.
+  name      String   // Display name: "Hero", "Custom Section"
+  isDefault Boolean  @default(false) // True for built-in categories
+  createdAt DateTime @default(now())
+
+  @@map("component_categories")
+}
+
 // UIComponent - dynamic UI components managed by admin
 model UIComponent {
   id          String   @id @default(cuid())

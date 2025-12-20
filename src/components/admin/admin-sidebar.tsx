@@ -7,7 +7,6 @@ import {
   Blocks,
   Code2,
   Image,
-  FileCode,
   Users,
   Settings,
   ArrowLeft,
@@ -38,11 +37,6 @@ const navItems = [
     title: "Gallery Images",
     href: "/admin/gallery",
     icon: Image,
-  },
-  {
-    title: "Templates",
-    href: "/admin/templates",
-    icon: FileCode,
   },
   {
     title: "Tutorials",

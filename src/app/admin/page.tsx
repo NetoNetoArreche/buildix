@@ -18,7 +18,7 @@ async function getStats() {
     totalComponents,
     totalSnippets,
     totalGalleryImages,
-    totalTemplates,
+    totalPublishedTemplates,
     recentUsers,
     recentProjects,
   ] = await Promise.all([
@@ -28,7 +28,7 @@ async function getStats() {
     prisma.uIComponent.count(),
     prisma.codeSnippet.count(),
     prisma.buildixGalleryImage.count(),
-    prisma.template.count(),
+    prisma.publishedProject.count({ where: { isPublished: true } }),
     prisma.user.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
@@ -60,7 +60,7 @@ async function getStats() {
     totalComponents,
     totalSnippets,
     totalGalleryImages,
-    totalTemplates,
+    totalPublishedTemplates,
     recentUsers,
     recentProjects,
   };
@@ -107,8 +107,8 @@ export default async function AdminDashboard() {
       color: "bg-cyan-500",
     },
     {
-      title: "Templates",
-      value: stats.totalTemplates,
+      title: "Community Templates",
+      value: stats.totalPublishedTemplates,
       icon: FileCode,
       color: "bg-yellow-500",
     },
