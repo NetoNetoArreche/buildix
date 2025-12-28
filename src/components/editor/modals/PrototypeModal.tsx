@@ -1171,7 +1171,7 @@ export function PrototypeModal({ open, onOpenChange, html, pageId }: PrototypeMo
               <p className="text-red-400">{error}</p>
             </div>
             <Button
-              onClick={analyzeNavigation}
+              onClick={() => analyzeNavigation()}
               className="bg-violet-600 hover:bg-violet-700"
             >
               <Play className="h-4 w-4 mr-2" />
