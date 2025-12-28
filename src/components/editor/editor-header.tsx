@@ -35,6 +35,7 @@ import {
   Plus,
   ArrowRightLeft,
   Trash2,
+  Play,
 } from "lucide-react";
 import { toPng, toBlob } from "html-to-image";
 import JSZip from "jszip";
@@ -262,6 +263,7 @@ import { generateThumbnail } from "@/lib/thumbnail";
 import { cn } from "@/lib/utils";
 import type { ViewMode, DeviceMode, Page } from "@/types";
 import type { Page as PrismaPage } from "@prisma/client";
+import { PrototypeModal } from "./modals/PrototypeModal";
 
 interface EditorHeaderProps {
   projectId: string;
@@ -278,6 +280,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
   const [isDownloading, setIsDownloading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<{ pageId: string; pageName: string } | null>(null);
   const [localPages, setLocalPages] = useState<PrismaPage[]>(initialPages || []);
+  const [showPrototypeModal, setShowPrototypeModal] = useState(false);
   const { viewMode, setViewMode, deviceMode, setDeviceMode, zoom, setZoom, undo, redo, canUndo, canRedo, htmlContent, backgroundAssets, showLayersPanel, toggleLayersPanel, syncHtmlFromIframe, currentPage, setCurrentPage } =
     useEditorStore();
   const { openModal } = useUIStore();
@@ -1046,6 +1049,30 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
 
         <Separator orientation="vertical" className="mx-1 h-6" />
 
+        {/* Prototype Button - Only shows for mobile-app content */}
+        {htmlContent && htmlContent.includes('class="app-screen') && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-violet-500/30 text-violet-400 hover:bg-violet-500/10 hover:text-violet-300"
+                onClick={() => {
+                  // Sync HTML first to get latest changes
+                  if (viewMode === "design") {
+                    syncHtmlFromIframe();
+                  }
+                  setShowPrototypeModal(true);
+                }}
+              >
+                <Play className="h-3.5 w-3.5" />
+                Prototipar
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Navegar entre telas como um app real</TooltipContent>
+          </Tooltip>
+        )}
+
         {/* Export & Publish */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -1208,6 +1235,14 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Prototype Modal */}
+      <PrototypeModal
+        open={showPrototypeModal}
+        onOpenChange={setShowPrototypeModal}
+        html={getExportHtml()}
+        pageId={currentPage?.id}
+      />
     </header>
   );
 }

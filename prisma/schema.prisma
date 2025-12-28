@@ -129,6 +129,11 @@ model Page {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  // Prototype cache - to avoid calling Gemini API every time
+  prototypeAnalysis   Json?      // Cached PrototypeAnalysis object
+  prototypeHtmlHash   String?    // SHA-256 hash of HTML for change detection
+  prototypeAnalyzedAt DateTime?  // When the prototype was last analyzed
+
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 

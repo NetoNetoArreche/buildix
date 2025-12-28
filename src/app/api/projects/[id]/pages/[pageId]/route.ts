@@ -91,6 +91,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       });
     }
 
+    // Check if HTML content is changing (to invalidate prototype cache)
+    const htmlChanged = htmlContent !== undefined && htmlContent !== existingPage.htmlContent;
+
     const page = await prisma.page.update({
       where: { id: pageId },
       data: {
@@ -101,6 +104,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(backgroundAssets !== undefined && { backgroundAssets }),
         ...(canvasSettings !== undefined && { canvasSettings }),
         ...(isHome !== undefined && { isHome }),
+        // Invalidate prototype cache if HTML changed
+        ...(htmlChanged && {
+          prototypeAnalysis: null,
+          prototypeHtmlHash: null,
+          prototypeAnalyzedAt: null,
+        }),
       },
     });
 

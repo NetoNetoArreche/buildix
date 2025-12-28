@@ -86,11 +86,14 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
         });
       }
 
-      // Step 2: Preprocess images (convert blobs, relative, and external URLs to base64)
+      // Step 2: Preprocess images
+      // - Blob URLs must be converted to base64 (they don't work externally)
+      // - Relative URLs must become absolute
+      // - External URLs (https) are kept as-is to avoid 413 payload size error
       const processResult = await preprocessHtmlForFigma(completeHtml, {
         convertBlobsToBase64: true,
         convertRelativeToAbsolute: true,
-        convertExternalToBase64: true,
+        convertExternalToBase64: false, // Keep https URLs - converting to base64 causes 413 errors
       });
 
       setProcessedCount(processResult.processedImages);
@@ -127,7 +130,14 @@ export function FigmaExportModal({ open, onOpenChange }: FigmaExportModalProps) 
       setIsReady(true);
     } catch (err) {
       console.error("Failed to convert to Figma:", err);
-      setError(err instanceof Error ? err.message : "Falha na conversao");
+      const errorMessage = err instanceof Error ? err.message : "Falha na conversao";
+
+      // Handle specific 413 error with user-friendly message
+      if (errorMessage.includes("413") || errorMessage.includes("Too Large")) {
+        setError("O design e muito grande para exportar. Tente remover algumas imagens ou reduzir o tamanho do conteudo.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsConverting(false);
       setIsProcessingImages(false);
