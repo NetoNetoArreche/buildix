@@ -26,21 +26,62 @@ interface DraggableNumberProps {
 
 function DraggableNumber({ value, onChange, min = 100, max = 3840, step = 1 }: DraggableNumberProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [displayValue, setDisplayValue] = useState(value);
+  const [inputValue, setInputValue] = useState(String(value));
+  const inputRef = useRef<HTMLInputElement>(null);
   const startX = useRef(0);
   const startValue = useRef(0);
   const currentValue = useRef(value);
   const rafId = useRef<number | null>(null);
   const lastCommittedValue = useRef(value);
 
-  // Sync display value with prop when not dragging
+  // Sync display value with prop when not dragging/editing
   useEffect(() => {
-    if (!isDragging) {
+    if (!isDragging && !isEditing) {
       setDisplayValue(value);
+      setInputValue(String(value));
       currentValue.current = value;
       lastCommittedValue.current = value;
     }
-  }, [value, isDragging]);
+  }, [value, isDragging, isEditing]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditing(true);
+    setInputValue(String(value));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleInputBlur = () => {
+    const newValue = parseInt(inputValue, 10);
+    if (!isNaN(newValue)) {
+      const clampedValue = Math.max(min, Math.min(max, newValue));
+      onChange(clampedValue);
+    }
+    setIsEditing(false);
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleInputBlur();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setInputValue(String(value));
+    }
+  };
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -103,6 +144,20 @@ function DraggableNumber({ value, onChange, min = 100, max = 3840, step = 1 }: D
     document.addEventListener("mouseup", handleMouseUp);
   }, [value, onChange, min, max, step]);
 
+  if (isEditing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={handleInputChange}
+        onBlur={handleInputBlur}
+        onKeyDown={handleInputKeyDown}
+        className="w-14 bg-zinc-800 border border-violet-500 rounded px-1 text-center text-xs text-zinc-100 outline-none"
+      />
+    );
+  }
+
   return (
     <span
       className={cn(
@@ -110,7 +165,8 @@ function DraggableNumber({ value, onChange, min = 100, max = 3840, step = 1 }: D
         isDragging && "text-violet-400 bg-violet-500/20"
       )}
       onMouseDown={handleMouseDown}
-      title="Drag left/right to change"
+      onDoubleClick={handleDoubleClick}
+      title="Drag to change, double-click to type"
     >
       {displayValue}
     </span>
