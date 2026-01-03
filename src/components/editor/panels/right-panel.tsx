@@ -1913,6 +1913,7 @@ function PromptTab({
 }) {
   // New states for enhanced features
   const [selectedModel, setSelectedModel] = useState<"gemini" | "claude">("gemini");
+  const [enabledModels, setEnabledModels] = useState<string[]>(["gemini", "claude"]);
   const [selectedSnippets, setSelectedSnippets] = useState<SelectedSnippet[]>([]);
   const [selectedComponents, setSelectedComponents] = useState<SelectedComponent[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<SelectedTemplate[]>([]);
@@ -1924,6 +1925,28 @@ function PromptTab({
     preview: string;
   } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch enabled AI models from configuration
+  useEffect(() => {
+    async function fetchAIConfig() {
+      try {
+        const response = await fetch("/api/ai-config");
+        if (response.ok) {
+          const data = await response.json();
+          setEnabledModels(data.enabledModels || ["gemini", "claude"]);
+          // If current model is disabled, switch to first enabled model
+          if (data.enabledModels && data.enabledModels.length > 0) {
+            if (!data.enabledModels.includes(selectedModel)) {
+              setSelectedModel(data.enabledModels[0] as "gemini" | "claude");
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI config:", error);
+      }
+    }
+    fetchAIConfig();
+  }, []);
 
   // Quick action prompts
   const quickActions = [
@@ -2169,14 +2192,25 @@ function PromptTab({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
-              <Sparkles className="h-3.5 w-3.5 mr-2" />
-              Gemini Pro
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
-              <Sparkles className="h-3.5 w-3.5 mr-2" />
-              Claude Sonnet
-            </DropdownMenuItem>
+            {enabledModels.includes("gemini") && (
+              <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
+                <Sparkles className="h-3.5 w-3.5 mr-2" />
+                Gemini
+                <span className="ml-2 text-[10px] text-muted-foreground">Google AI - Rápido e criativo</span>
+              </DropdownMenuItem>
+            )}
+            {enabledModels.includes("claude") && (
+              <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
+                <Sparkles className="h-3.5 w-3.5 mr-2" />
+                Claude
+                <span className="ml-2 text-[10px] text-muted-foreground">Anthropic AI - Detalhado e preciso</span>
+              </DropdownMenuItem>
+            )}
+            {enabledModels.length === 0 && (
+              <DropdownMenuItem disabled>
+                <span className="text-muted-foreground">Nenhum modelo disponível</span>
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 

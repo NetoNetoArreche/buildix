@@ -468,6 +468,10 @@ model SiteSettings {
   maintenanceMode    Boolean  @default(false)
   maintenanceTitle   String?  @default("BuildixLab")
   maintenanceMessage String?  @default("Em breve estará disponível")
+  // AI Model Configuration
+  enableGemini       Boolean  @default(true)
+  enableClaude       Boolean  @default(true)
+  defaultAIModel     String   @default("gemini")
   updatedAt          DateTime @updatedAt
   updatedBy          String?  // ID do admin que alterou
 
