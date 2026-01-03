@@ -134,7 +134,6 @@ export const PLANS: Record<PlanType, Plan> = {
       { name: "Componentes e Templates PRO", included: true },
       { name: "Uso comercial", included: true },
       { name: "Suporte prioritário", included: true },
-      { name: "API Access", included: true },
     ],
     badge: "Melhor Valor",
   },

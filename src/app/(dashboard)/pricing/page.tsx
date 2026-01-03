@@ -132,13 +132,6 @@ const featureCategories = [
         MAX: true,
         ULTRA: true,
       },
-      {
-        name: "API Access",
-        FREE: false,
-        PRO: false,
-        MAX: false,
-        ULTRA: true,
-      },
     ],
   },
 ];
