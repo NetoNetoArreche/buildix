@@ -98,6 +98,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
 
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<AIModel>("gemini");
+  const [enabledModels, setEnabledModels] = useState<string[]>(["gemini", "claude"]);
   const [contentType, setContentType] = useState<ContentType>("landing");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
@@ -113,6 +114,27 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     mimeType: string;
     preview: string;
   } | null>(null);
+
+  // Fetch enabled AI models from configuration
+  useEffect(() => {
+    async function fetchAIConfig() {
+      try {
+        const response = await fetch("/api/ai-config");
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.enabledModels || ["gemini", "claude"];
+          setEnabledModels(models);
+          // If current model is disabled, switch to first enabled model
+          if (models.length > 0 && !models.includes(selectedModel)) {
+            setSelectedModel(models[0] as AIModel);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI config:", error);
+      }
+    }
+    fetchAIConfig();
+  }, []);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -1172,14 +1194,23 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
                     <TooltipContent>{selectedModel === "gemini" ? "Gemini Pro" : "Claude Sonnet"}</TooltipContent>
                   </Tooltip>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
-                      <Sparkles className="mr-2 h-3.5 w-3.5" />
-                      Gemini Pro
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
-                      <Bot className="mr-2 h-3.5 w-3.5" />
-                      Claude Sonnet
-                    </DropdownMenuItem>
+                    {enabledModels.includes("gemini") && (
+                      <DropdownMenuItem onClick={() => setSelectedModel("gemini")}>
+                        <Sparkles className="mr-2 h-3.5 w-3.5" />
+                        Gemini Pro
+                      </DropdownMenuItem>
+                    )}
+                    {enabledModels.includes("claude") && (
+                      <DropdownMenuItem onClick={() => setSelectedModel("claude")}>
+                        <Bot className="mr-2 h-3.5 w-3.5" />
+                        Claude Sonnet
+                      </DropdownMenuItem>
+                    )}
+                    {enabledModels.length === 0 && (
+                      <DropdownMenuItem disabled>
+                        <span className="text-muted-foreground">Nenhum modelo disponível</span>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 

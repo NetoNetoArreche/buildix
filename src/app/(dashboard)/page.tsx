@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tooltip";
 import { ProjectPreviewIframe } from "@/components/ui/project-preview-iframe";
 
-const AI_MODELS: { id: AIModel; name: string; description: string }[] = [
+const ALL_AI_MODELS: { id: AIModel; name: string; description: string }[] = [
   { id: "gemini", name: "Gemini", description: "Google's AI model - Fast & Creative" },
   { id: "claude", name: "Claude", description: "Anthropic's AI model - Detailed & Accurate" },
 ];
@@ -86,6 +86,7 @@ export default function CreatePage() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<AIModel>("gemini");
+  const [enabledModels, setEnabledModels] = useState<string[]>(["gemini", "claude"]);
   const [contentType, setContentType] = useState<ContentType>("landing");
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
@@ -101,6 +102,27 @@ export default function CreatePage() {
     preview: string;
   } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch enabled AI models from configuration
+  useEffect(() => {
+    async function fetchAIConfig() {
+      try {
+        const response = await fetch("/api/ai-config");
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.enabledModels || ["gemini", "claude"];
+          setEnabledModels(models);
+          // If current model is disabled, switch to first enabled model
+          if (models.length > 0 && !models.includes(selectedModel)) {
+            setSelectedModel(models[0] as AIModel);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch AI config:", error);
+      }
+    }
+    fetchAIConfig();
+  }, []);
 
   // Load Unicorn Studio script for background effect
   useEffect(() => {
@@ -344,7 +366,9 @@ export default function CreatePage() {
     router.push("/editor/new");
   };
 
-  const currentModel = AI_MODELS.find(m => m.id === selectedModel);
+  // Filter models based on enabled configuration
+  const availableModels = ALL_AI_MODELS.filter(m => enabledModels.includes(m.id));
+  const currentModel = ALL_AI_MODELS.find(m => m.id === selectedModel);
 
   const handleQuickPrompt = (promptText: string) => {
     setPrompt(promptText);
@@ -526,21 +550,27 @@ export default function CreatePage() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64">
-                  {AI_MODELS.map((model) => (
-                    <DropdownMenuItem
-                      key={model.id}
-                      onClick={() => setSelectedModel(model.id)}
-                      className={cn(
-                        "flex flex-col items-start gap-0.5 cursor-pointer p-3",
-                        selectedModel === model.id && "bg-accent"
-                      )}
-                    >
-                      <span className="font-medium">{model.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {model.description}
-                      </span>
+                  {availableModels.length > 0 ? (
+                    availableModels.map((model) => (
+                      <DropdownMenuItem
+                        key={model.id}
+                        onClick={() => setSelectedModel(model.id)}
+                        className={cn(
+                          "flex flex-col items-start gap-0.5 cursor-pointer p-3",
+                          selectedModel === model.id && "bg-accent"
+                        )}
+                      >
+                        <span className="font-medium">{model.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {model.description}
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <DropdownMenuItem disabled>
+                      <span className="text-muted-foreground">Nenhum modelo disponível</span>
                     </DropdownMenuItem>
-                  ))}
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 
