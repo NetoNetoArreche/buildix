@@ -10,7 +10,23 @@ interface RouteParams {
 // GET /api/projects/[id]/pages - List all pages for a project
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    // Authentication check
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id: projectId } = await params;
+
+    // Verify ownership of the project
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { userId: true },
+    });
+
+    if (!project || project.userId !== session.user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
     const pages = await prisma.page.findMany({
       where: { projectId },
@@ -37,9 +53,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { id: projectId } = await params;
 
-    // Admin bypass for limits
-    const ADMIN_EMAIL = "helioarreche@gmail.com";
-    const isAdmin = session.user.email === ADMIN_EMAIL;
+    // Verify ownership of the project
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: { userId: true },
+    });
+
+    if (!project || project.userId !== session.user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    // Admin bypass for limits (using role instead of hardcoded email)
+    const isAdmin = (session.user as { role?: string }).role === "ADMIN";
 
     // Check page limit for this project (skip for admin)
     if (!isAdmin) {
@@ -49,7 +74,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
 
       if (!allowed) {
-        console.log(`[Pages API] User ${session.user.email} hit page limit: ${currentPages}/${limit} (${plan})`);
         return NextResponse.json(
           {
             error: message,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,6 +9,12 @@ interface RouteParams {
 // GET /api/projects/[id] - Get a single project
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    // Authentication check
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     const project = await prisma.project.findUnique({
@@ -27,6 +34,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Ownership check - user can only access their own projects
+    if (project.userId !== user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     return NextResponse.json(project);
   } catch (error) {
     console.error("Error fetching project:", error);
@@ -40,7 +52,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 // PUT /api/projects/[id] - Update a project
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
+    // Authentication check
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    // Verify ownership before updating
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!existingProject || existingProject.userId !== user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
     const body = await request.json();
     const { name, description, thumbnail } = body;
 
@@ -69,7 +98,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 // DELETE /api/projects/[id] - Delete a project
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
+    // Authentication check
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
+
+    // Verify ownership before deleting
+    const existingProject = await prisma.project.findUnique({
+      where: { id },
+      select: { userId: true },
+    });
+
+    if (!existingProject || existingProject.userId !== user.id) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
 
     await prisma.project.delete({
       where: { id },

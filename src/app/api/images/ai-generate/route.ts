@@ -5,9 +5,6 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { canUseFeature, incrementUsage, getUsageLimitMessage } from "@/lib/usage";
 
-// Admin bypass - same email used in ai/stream
-const ADMIN_EMAIL = "helioarreche@gmail.com";
-
 // Initialize S3 client
 const getS3Client = () => {
   if (
@@ -95,8 +92,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Admin bypass - no usage limits for admin
-    const isAdmin = user?.email === ADMIN_EMAIL;
+    // Admin bypass - no usage limits for admin (using role instead of hardcoded email)
+    const isAdmin = (user as { role?: string }).role === "ADMIN";
 
     // Check usage limits for images (skip for admin)
     if (!isAdmin) {

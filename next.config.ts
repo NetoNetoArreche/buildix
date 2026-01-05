@@ -21,7 +21,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "**.amazonaws.com" },
+      { protocol: "https", hostname: "buildix-user-images.s3.us-east-1.amazonaws.com" },
+      { protocol: "https", hostname: "buildix-user-images.s3.amazonaws.com" },
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "images.pexels.com" },
       { protocol: "https", hostname: "*.pexels.com" },
