@@ -3,6 +3,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getAdminSession } from "@/lib/admin";
+import { validateUploadedImage } from "@/lib/file-validation";
 
 // Configure max body size for file uploads (50MB)
 export const config = {
@@ -74,14 +75,15 @@ export async function POST(req: NextRequest) {
 
     for (const file of files) {
       try {
-        // Validate file type
-        if (!file.type.startsWith("image/")) {
-          errors.push({ file: file.name, error: "Not an image file" });
+        // Get file buffer first for magic bytes validation
+        const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Validate file using magic bytes (not just MIME type which can be spoofed)
+        const validation = validateUploadedImage(buffer, file.type);
+        if (!validation.valid) {
+          errors.push({ file: file.name, error: validation.error || "Invalid image file" });
           continue;
         }
-
-        // Get file buffer
-        const buffer = Buffer.from(await file.arrayBuffer());
 
         // Generate unique key
         const fileExtension = file.name.split(".").pop() || "jpg";

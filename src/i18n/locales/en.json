@@ -49,7 +49,7 @@
     "passwordPlaceholder": "Enter your password",
     "confirmPassword": "Confirm Password",
     "confirmPasswordPlaceholder": "Confirm your password",
-    "createPasswordPlaceholder": "Create a password (min. 6 characters)",
+    "createPasswordPlaceholder": "Create a password (min. 8 characters)",
     "name": "Name",
     "namePlaceholder": "Your name",
     "orContinueWith": "Or continue with",
@@ -59,7 +59,7 @@
     "errors": {
       "invalidCredentials": "Invalid email or password",
       "passwordsDoNotMatch": "Passwords do not match",
-      "passwordTooShort": "Password must be at least 6 characters",
+      "passwordTooShort": "Password must be at least 8 characters",
       "registrationFailed": "Registration failed",
       "loginFailedAfterRegister": "Account created but login failed. Please try logging in.",
       "somethingWentWrong": "Something went wrong. Please try again."

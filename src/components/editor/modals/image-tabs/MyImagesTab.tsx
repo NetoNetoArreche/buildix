@@ -6,6 +6,49 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+// Valid image magic bytes signatures
+const IMAGE_SIGNATURES = {
+  jpeg: [0xFF, 0xD8, 0xFF],
+  png: [0x89, 0x50, 0x4E, 0x47],
+  gif: [0x47, 0x49, 0x46, 0x38],
+  webp: [0x52, 0x49, 0x46, 0x46], // RIFF header, also check WEBP at offset 8
+};
+
+// Validate file by checking magic bytes
+async function validateImageFile(file: File): Promise<{ valid: boolean; error?: string }> {
+  // Size check (10MB max)
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: "File too large. Maximum size is 10MB" };
+  }
+
+  // Read first 12 bytes for magic byte validation
+  const buffer = await file.slice(0, 12).arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Check JPEG
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return { valid: true };
+  }
+
+  // Check PNG
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return { valid: true };
+  }
+
+  // Check GIF
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return { valid: true };
+  }
+
+  // Check WebP (RIFF + WEBP)
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return { valid: true };
+  }
+
+  return { valid: false, error: "Invalid image format. Only JPEG, PNG, GIF, and WebP are allowed." };
+}
+
 interface ImageItem {
   id: string;
   url: string;
@@ -33,6 +76,9 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  // Upload error state
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
   const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -57,9 +103,17 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
     if (!files || files.length === 0) return;
 
     setIsUploading(true);
+    setUploadError(null);
 
     try {
       for (const file of Array.from(files)) {
+        // Validate file using magic bytes before uploading
+        const validation = await validateImageFile(file);
+        if (!validation.valid) {
+          setUploadError(validation.error || "Invalid file");
+          continue;
+        }
+
         // 1. Get presigned URL
         const presignedResponse = await fetch(
           `/api/images/upload?fileName=${encodeURIComponent(file.name)}&fileType=${encodeURIComponent(file.type)}`
@@ -312,6 +366,13 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
             </>
           )}
         </Button>
+
+        {/* Upload Error Message */}
+        {uploadError && (
+          <div className="mt-2 rounded-lg bg-destructive/10 p-2 text-xs text-destructive">
+            {uploadError}
+          </div>
+        )}
       </div>
 
       {/* Action Buttons - Show when image is selected */}

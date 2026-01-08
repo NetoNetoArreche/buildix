@@ -55,6 +55,41 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
+// Validate file by checking magic bytes
+async function validateImageFile(file: File): Promise<{ valid: boolean; error?: string }> {
+  // Size check (10MB max)
+  if (file.size > 10 * 1024 * 1024) {
+    return { valid: false, error: "File too large. Maximum size is 10MB" };
+  }
+
+  // Read first 12 bytes for magic byte validation
+  const buffer = await file.slice(0, 12).arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+
+  // Check JPEG
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) {
+    return { valid: true };
+  }
+
+  // Check PNG
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) {
+    return { valid: true };
+  }
+
+  // Check GIF
+  if (bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38) {
+    return { valid: true };
+  }
+
+  // Check WebP (RIFF + WEBP)
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) {
+    return { valid: true };
+  }
+
+  return { valid: false, error: "Invalid image format. Only JPEG, PNG, GIF, and WebP are allowed." };
+}
+
 interface Asset {
   id: string;
   url: string;
@@ -104,6 +139,7 @@ export default function AssetsPage() {
   const [uploadCategory, setUploadCategory] = useState("all");
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Delete state
@@ -254,19 +290,46 @@ export default function AssetsPage() {
     enabled: hasMoreGallery && !isLoadingGallery && !isLoadingMoreGallery && activeTab === "gallery",
   });
 
-  // File upload handlers
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File upload handlers with magic byte validation
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
-    setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    setUploadError(null);
+
+    const validFiles: File[] = [];
+    for (const file of files) {
+      const validation = await validateImageFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        setUploadError(validation.error || "Invalid file");
+      }
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+    }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
+    setUploadError(null);
+
     const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter((f) => f.type.startsWith("image/"));
-    setSelectedFiles((prev) => [...prev, ...imageFiles]);
+    const validFiles: File[] = [];
+
+    for (const file of files) {
+      const validation = await validateImageFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        setUploadError(validation.error || "Invalid file");
+      }
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...validFiles]);
+    }
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -636,6 +699,13 @@ export default function AssetsPage() {
                 or click to browse (PNG, JPG, WebP)
               </p>
             </div>
+
+            {/* Upload Error Message */}
+            {uploadError && (
+              <div className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                {uploadError}
+              </div>
+            )}
 
             {/* Selected Files Preview */}
             {selectedFiles.length > 0 && (

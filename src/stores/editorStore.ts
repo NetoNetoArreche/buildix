@@ -214,7 +214,14 @@ export const useEditorStore = create<EditorState>()(
         state.hoveredElementId = id;
       }),
 
-    setViewMode: (mode) =>
+    setViewMode: (mode) => {
+      // Se estamos SAINDO do design mode, sincronizar HTML do iframe primeiro
+      const currentMode = get().viewMode;
+      if (currentMode === "design" && mode !== "design") {
+        console.log("[EditorStore] Syncing HTML from iframe before leaving design mode");
+        get().syncHtmlFromIframe();
+      }
+
       set((state) => {
         state.viewMode = mode;
         // Clear selection when switching away from design mode
@@ -222,7 +229,8 @@ export const useEditorStore = create<EditorState>()(
           state.selectedElementId = null;
           state.selectedElementData = null;
         }
-      }),
+      });
+    },
 
     setZoom: (zoom) =>
       set((state) => {

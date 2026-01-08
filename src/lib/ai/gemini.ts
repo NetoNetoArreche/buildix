@@ -106,10 +106,42 @@ export async function* streamWithGemini(
     }
 
     console.log(`[Gemini] Stream complete. Total chunks: ${chunkCount}`);
-  } catch (error) {
+  } catch (error: unknown) {
+    // Log full error details for debugging
     console.error("[Gemini] Error during stream:", error);
-    // Re-throw the error so it can be caught by the route handler
-    throw error;
+
+    // Extract meaningful error message
+    let errorMessage = "Gemini API error";
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      console.error("[Gemini] Error message:", error.message);
+      console.error("[Gemini] Error stack:", error.stack);
+    }
+
+    // Check for common API errors
+    if (typeof error === "object" && error !== null) {
+      const errorObj = error as Record<string, unknown>;
+      if (errorObj.status) {
+        console.error("[Gemini] HTTP Status:", errorObj.status);
+      }
+      if (errorObj.statusText) {
+        console.error("[Gemini] Status Text:", errorObj.statusText);
+      }
+      if (errorObj.message) {
+        errorMessage = String(errorObj.message);
+      }
+      // Google API specific error structure
+      if (errorObj.error && typeof errorObj.error === "object") {
+        const apiError = errorObj.error as Record<string, unknown>;
+        if (apiError.message) {
+          errorMessage = String(apiError.message);
+        }
+      }
+    }
+
+    // Re-throw with better message
+    throw new Error(errorMessage);
   }
 }
 

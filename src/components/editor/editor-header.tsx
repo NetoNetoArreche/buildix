@@ -300,12 +300,20 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
   const pages = localPages;
 
   // Get HTML with background assets injected
-  const getExportHtml = () => {
+  // NOTE: This should NOT be called during render as syncHtmlFromIframe causes setState
+  const getExportHtml = (shouldSync: boolean = true) => {
     // Sync from iframe first if in design mode to get latest changes
-    if (viewMode === "design") {
+    // Only sync if explicitly requested (not during render)
+    if (shouldSync && viewMode === "design") {
       syncHtmlFromIframe();
     }
     // Get the updated htmlContent from the store
+    const currentHtml = useEditorStore.getState().htmlContent;
+    return injectBackgroundAssets(currentHtml, backgroundAssets);
+  };
+
+  // Get HTML without triggering sync (safe to call during render)
+  const getExportHtmlSafe = () => {
     const currentHtml = useEditorStore.getState().htmlContent;
     return injectBackgroundAssets(currentHtml, backgroundAssets);
   };
@@ -1240,7 +1248,7 @@ export function EditorHeader({ projectId, projectName, pages: initialPages }: Ed
       <PrototypeModal
         open={showPrototypeModal}
         onOpenChange={setShowPrototypeModal}
-        html={getExportHtml()}
+        html={getExportHtmlSafe()}
         pageId={currentPage?.id}
       />
     </header>

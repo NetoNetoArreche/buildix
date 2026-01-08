@@ -29,7 +29,7 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       setError(t("errors.passwordTooShort"));
       return;
     }

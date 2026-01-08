@@ -100,33 +100,38 @@ export function useAI(): UseAIReturn {
 
             for (const line of lines) {
               if (line.startsWith("data: ")) {
+                // Parse JSON separately so errors from data.error propagate correctly
+                let data;
                 try {
-                  const data = JSON.parse(line.slice(6));
-                  if (data.chunk) {
-                    chunkCount++;
-                    fullContent += data.chunk;
-                    setStreamedContent(fullContent);
-                    onStream(data.chunk);
-
-                    // Update progress when code starts flowing
-                    if (chunkCount === 1) {
-                      setGenerationProgress("Writing HTML & CSS code...");
-                    }
-
-                    // Log every 5th chunk to track progress
-                    if (chunkCount % 5 === 0) {
-                      console.log(`[useAI] Chunk #${chunkCount}, total length: ${fullContent.length}`);
-                    }
-                  }
-                  if (data.done) {
-                    setGenerationProgress("Complete!");
-                    console.log("[useAI] Received done signal");
-                  }
-                  if (data.error) {
-                    throw new Error(data.error);
-                  }
+                  data = JSON.parse(line.slice(6));
                 } catch (e) {
                   // Skip invalid JSON lines
+                  continue;
+                }
+
+                // Handle parsed data - errors here will propagate up
+                if (data.chunk) {
+                  chunkCount++;
+                  fullContent += data.chunk;
+                  setStreamedContent(fullContent);
+                  onStream(data.chunk);
+
+                  // Update progress when code starts flowing
+                  if (chunkCount === 1) {
+                    setGenerationProgress("Writing HTML & CSS code...");
+                  }
+
+                  // Log every 5th chunk to track progress
+                  if (chunkCount % 5 === 0) {
+                    console.log(`[useAI] Chunk #${chunkCount}, total length: ${fullContent.length}`);
+                  }
+                }
+                if (data.done) {
+                  setGenerationProgress("Complete!");
+                  console.log("[useAI] Received done signal");
+                }
+                if (data.error) {
+                  throw new Error(data.error);
                 }
               }
             }

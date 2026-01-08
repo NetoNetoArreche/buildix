@@ -49,7 +49,7 @@
     "passwordPlaceholder": "Digite sua senha",
     "confirmPassword": "Confirmar Senha",
     "confirmPasswordPlaceholder": "Confirme sua senha",
-    "createPasswordPlaceholder": "Crie uma senha (min. 6 caracteres)",
+    "createPasswordPlaceholder": "Crie uma senha (min. 8 caracteres)",
     "name": "Nome",
     "namePlaceholder": "Seu nome",
     "orContinueWith": "Ou continue com",
@@ -59,7 +59,7 @@
     "errors": {
       "invalidCredentials": "Email ou senha invalidos",
       "passwordsDoNotMatch": "As senhas nao coincidem",
-      "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
+      "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
       "registrationFailed": "Falha no cadastro",
       "loginFailedAfterRegister": "Conta criada mas o login falhou. Por favor, tente fazer login.",
       "somethingWentWrong": "Algo deu errado. Por favor, tente novamente."

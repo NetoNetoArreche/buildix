@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate password length
-    if (password.length < 6) {
+    // Validate password length (NIST recommends minimum 8 characters)
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
         { status: 400 }
       );
     }
