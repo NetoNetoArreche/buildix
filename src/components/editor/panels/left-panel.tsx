@@ -114,6 +114,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     mimeType: string;
     preview: string;
   } | null>(null);
+  const [generateAIImages, setGenerateAIImages] = useState(false);
 
   // Fetch enabled AI models from configuration
   useEffect(() => {
@@ -226,10 +227,12 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     const pendingModel = sessionStorage.getItem("buildix-pending-model") as AIModel | null;
     const pendingContentType = sessionStorage.getItem("buildix-pending-content-type") as ContentType | null;
     const pendingReferenceImageStr = sessionStorage.getItem("buildix-pending-reference-image");
+    const pendingGenerateImages = sessionStorage.getItem("buildix-pending-generate-images") === "true";
     const pendingFigmaImportStr = sessionStorage.getItem("buildix-figma-import");
 
     console.log("[LeftPanel] Checking for pending prompt:", pendingPrompt ? "found" : "not found");
     console.log("[LeftPanel] Checking for pending reference image:", pendingReferenceImageStr ? "found" : "not found");
+    console.log("[LeftPanel] Checking for pending generate images:", pendingGenerateImages);
     console.log("[LeftPanel] Checking for Figma import:", pendingFigmaImportStr ? "found" : "not found");
 
     // Handle Figma import - just load HTML directly without generating
@@ -278,6 +281,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
       sessionStorage.removeItem("buildix-pending-model");
       sessionStorage.removeItem("buildix-pending-content-type");
       sessionStorage.removeItem("buildix-pending-reference-image");
+      sessionStorage.removeItem("buildix-pending-generate-images");
 
       // Set the model if provided
       if (pendingModel) {
@@ -287,6 +291,11 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
       // Set the content type if provided
       if (pendingContentType) {
         setContentType(pendingContentType);
+      }
+
+      // Set AI image generation toggle if enabled from Create page
+      if (pendingGenerateImages) {
+        setGenerateAIImages(true);
       }
 
       // Start generation immediately
@@ -331,6 +340,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
           model: modelToUse,
           type: pendingReferenceImage ? "image-reference" : generationType,
           referenceImage: pendingReferenceImage || undefined,
+          generateImages: pendingGenerateImages,
           onStream: (chunk) => {
             setStreamingContent((prev) => {
               const newContent = prev + chunk;
@@ -741,6 +751,8 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
         data: currentReferenceImage.data,
         mimeType: currentReferenceImage.mimeType,
       } : undefined,
+      // Generate AI images alongside HTML if toggle is enabled
+      generateImages: generateAIImages,
       onStream: (chunk) => {
         setStreamingContent((prev) => {
           const newContent = prev + chunk;
@@ -1268,6 +1280,27 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
                   className="hidden"
                   onChange={handleImageUpload}
                 />
+
+                {/* AI Image Generation Toggle */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={generateAIImages ? "default" : "ghost"}
+                      size="icon"
+                      className={cn(
+                        "h-7 w-7",
+                        generateAIImages && "bg-purple-500 hover:bg-purple-600 text-white"
+                      )}
+                      onClick={() => setGenerateAIImages(!generateAIImages)}
+                      disabled={isGenerating}
+                    >
+                      <Sparkles className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {generateAIImages ? "Gerar imagens IA: ATIVADO" : "Gerar imagens com IA"}
+                  </TooltipContent>
+                </Tooltip>
 
                 {/* Figma Import Button - Disabled (not implemented yet) */}
                 <Tooltip>

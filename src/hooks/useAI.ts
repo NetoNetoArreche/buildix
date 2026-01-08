@@ -18,6 +18,7 @@ interface GenerateOptions {
     data: string; // base64 encoded image data (without data URL prefix)
     mimeType: string; // e.g., "image/png", "image/jpeg", "image/webp"
   };
+  generateImages?: boolean; // Generate AI images alongside HTML
 }
 
 interface UseAIReturn {
@@ -45,6 +46,7 @@ export function useAI(): UseAIReturn {
         designContext,
         onStream,
         referenceImage,
+        generateImages,
       } = options;
 
       setIsGenerating(true);
@@ -69,6 +71,7 @@ export function useAI(): UseAIReturn {
               elementHtml,
               designContext,
               referenceImage,
+              generateImages,
             }),
           });
 
@@ -110,6 +113,13 @@ export function useAI(): UseAIReturn {
                 }
 
                 // Handle parsed data - errors here will propagate up
+
+                // Handle status updates (for image generation progress)
+                if (data.status && data.message) {
+                  setGenerationProgress(data.message);
+                  console.log(`[useAI] Status: ${data.status} - ${data.message}`);
+                }
+
                 if (data.chunk) {
                   chunkCount++;
                   fullContent += data.chunk;

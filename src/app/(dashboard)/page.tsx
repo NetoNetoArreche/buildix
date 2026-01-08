@@ -101,6 +101,7 @@ export default function CreatePage() {
     mimeType: string;
     preview: string;
   } | null>(null);
+  const [generateAIImages, setGenerateAIImages] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch enabled AI models from configuration
@@ -362,6 +363,9 @@ export default function CreatePage() {
       sessionStorage.removeItem("buildix-pending-reference-image");
     }
 
+    // Store AI image generation preference
+    sessionStorage.setItem("buildix-pending-generate-images", generateAIImages.toString());
+
     // Redirect immediately to the editor - generation will happen there with streaming
     router.push("/editor/new");
   };
@@ -617,6 +621,26 @@ export default function CreatePage() {
                 className="hidden"
                 onChange={handleImageUpload}
               />
+
+              {/* AI Image Generation Toggle */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={generateAIImages ? "default" : "outline"}
+                    size="icon"
+                    className={cn(
+                      "h-8 w-8",
+                      generateAIImages && "bg-purple-500 hover:bg-purple-600 text-white"
+                    )}
+                    onClick={() => setGenerateAIImages(!generateAIImages)}
+                  >
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {generateAIImages ? "Gerar imagens IA: ATIVADO" : "Gerar imagens com IA"}
+                </TooltipContent>
+              </Tooltip>
 
               {/* Figma Import Button - Disabled (not implemented yet) */}
               <Tooltip>
