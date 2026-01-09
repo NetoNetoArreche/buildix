@@ -7,7 +7,7 @@ export default auth(async (req) => {
   const { pathname } = req.nextUrl;
 
   // Routes that bypass maintenance check completely
-  const maintenanceBypassRoutes = ["/coming-soon", "/api/maintenance", "/api/auth"];
+  const maintenanceBypassRoutes = ["/coming-soon", "/api/maintenance", "/api/auth", "/api/stripe"];
 
   // Public routes that don't require authentication
   const publicRoutes = ["/login", "/register", "/coming-soon"];
