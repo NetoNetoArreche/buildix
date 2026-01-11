@@ -7,7 +7,6 @@ import {
   FolderOpen,
   Image,
   Settings,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -84,11 +83,6 @@ const bottomNavItems = [
     titleKey: "settings",
     href: "/settings",
     icon: Settings,
-  },
-  {
-    titleKey: "help",
-    href: "/help",
-    icon: HelpCircle,
   },
 ];
 
