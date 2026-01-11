@@ -20,8 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Bug, Sparkles, TrendingUp, MessageCircle } from "lucide-react";
-import { toast } from "sonner";
+import { Loader2, Bug, Sparkles, TrendingUp, MessageCircle, CheckCircle2, AlertCircle } from "lucide-react";
 
 type FeedbackCategory = "bug" | "feature" | "improvement" | "other";
 
@@ -43,21 +42,24 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     // Validation
     if (!category) {
-      toast.error("Selecione uma categoria");
+      setError("Selecione uma categoria");
       return;
     }
     if (title.length < 5) {
-      toast.error("O titulo deve ter pelo menos 5 caracteres");
+      setError("O titulo deve ter pelo menos 5 caracteres");
       return;
     }
     if (description.length < 10) {
-      toast.error("A descricao deve ter pelo menos 10 caracteres");
+      setError("A descricao deve ter pelo menos 10 caracteres");
       return;
     }
 
@@ -75,17 +77,19 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
         throw new Error(data.error || "Erro ao enviar feedback");
       }
 
-      toast.success("Feedback enviado com sucesso!");
+      setSuccess(true);
 
-      // Reset form
-      setCategory("feature");
-      setTitle("");
-      setDescription("");
-
-      onOpenChange(false);
-      onSuccess?.();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao enviar feedback");
+      // Reset form after delay
+      setTimeout(() => {
+        setCategory("feature");
+        setTitle("");
+        setDescription("");
+        setSuccess(false);
+        onOpenChange(false);
+        onSuccess?.();
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao enviar feedback");
     } finally {
       setIsSubmitting(false);
     }
@@ -159,20 +163,41 @@ export function FeedbackModal({ open, onOpenChange, onSuccess }: FeedbackModalPr
             </p>
           </div>
 
+          {/* Error message */}
+          {error && (
+            <div className="flex items-center gap-2 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/20 dark:text-red-400 rounded-md">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Success message */}
+          {success && (
+            <div className="flex items-center gap-2 p-3 text-sm text-green-600 bg-green-50 dark:bg-green-950/20 dark:text-green-400 rounded-md">
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+              <span>Feedback enviado com sucesso!</span>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || success}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || success}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Enviando...
+                </>
+              ) : success ? (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Enviado!
                 </>
               ) : (
                 "Enviar Feedback"

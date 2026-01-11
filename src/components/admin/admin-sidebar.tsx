@@ -14,6 +14,8 @@ import {
   GraduationCap,
   History,
   DollarSign,
+  MessageSquare,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +49,16 @@ const navItems = [
     title: "Changelog",
     href: "/admin/changelog",
     icon: History,
+  },
+  {
+    title: "Feedback",
+    href: "/admin/feedback",
+    icon: MessageSquare,
+  },
+  {
+    title: "Notificacoes",
+    href: "/admin/notifications",
+    icon: Bell,
   },
   {
     title: "Users",

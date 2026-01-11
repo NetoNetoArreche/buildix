@@ -35,12 +35,27 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FeedbackModal } from "@/components/feedback";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 type FeedbackCategory = "bug" | "feature" | "improvement" | "other";
+
+// Simple date formatting function
+function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "agora mesmo";
+  if (diffMins < 60) return `ha ${diffMins} minuto${diffMins > 1 ? "s" : ""}`;
+  if (diffHours < 24) return `ha ${diffHours} hora${diffHours > 1 ? "s" : ""}`;
+  if (diffDays < 7) return `ha ${diffDays} dia${diffDays > 1 ? "s" : ""}`;
+  if (diffDays < 30) return `ha ${Math.floor(diffDays / 7)} semana${diffDays >= 14 ? "s" : ""}`;
+  return `ha ${Math.floor(diffDays / 30)} mes${diffDays >= 60 ? "es" : ""}`;
+}
+
 type FeedbackStatus = "open" | "in_review" | "planned" | "completed" | "rejected";
 
 interface Feedback {
@@ -113,7 +128,6 @@ export default function FeedbackPage() {
       setFeedbacks(data.feedbacks);
     } catch (error) {
       console.error("Error fetching feedbacks:", error);
-      toast.error("Erro ao carregar feedbacks");
     } finally {
       setIsLoading(false);
     }
@@ -136,10 +150,9 @@ export default function FeedbackPage() {
 
       if (!response.ok) throw new Error("Failed to delete");
 
-      toast.success("Feedback removido");
       setFeedbacks((prev) => prev.filter((f) => f.id !== deleteId));
     } catch (error) {
-      toast.error("Erro ao remover feedback");
+      console.error("Error deleting feedback:", error);
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
@@ -155,7 +168,7 @@ export default function FeedbackPage() {
   }
 
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
+    <div className="container max-w-4xl mx-auto py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -259,10 +272,7 @@ export default function FeedbackPage() {
                   <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {formatDistanceToNow(new Date(feedback.createdAt), {
-                        addSuffix: true,
-                        locale: ptBR,
-                      })}
+                      {formatTimeAgo(feedback.createdAt)}
                     </div>
                     <span className="text-muted-foreground/50">|</span>
                     <span>{categoryConfig.label}</span>
