@@ -30,7 +30,9 @@
     "feedback": "Feedback",
     "pricing": "Precios",
     "settings": "Configuracion",
-    "help": "Ayuda"
+    "help": "Ayuda",
+    "terms": "Terminos",
+    "privacy": "Privacidad"
   },
   "header": {
     "searchPlaceholder": "Buscar proyectos, plantillas..."

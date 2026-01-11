@@ -30,7 +30,9 @@
     "feedback": "Feedback",
     "pricing": "Pricing",
     "settings": "Settings",
-    "help": "Help"
+    "help": "Help",
+    "terms": "Terms",
+    "privacy": "Privacy"
   },
   "header": {
     "searchPlaceholder": "Search projects, templates..."

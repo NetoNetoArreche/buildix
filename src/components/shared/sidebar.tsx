@@ -237,6 +237,19 @@ export function Sidebar() {
               </Link>
             );
           })}
+
+          {/* Legal Links */}
+          {!sidebarCollapsed && (
+            <div className="mt-4 flex items-center justify-center gap-2 px-3 text-xs text-muted-foreground">
+              <Link href="/terms" className="hover:text-foreground hover:underline transition-colors">
+                {t("terms")}
+              </Link>
+              <span>·</span>
+              <Link href="/privacy" className="hover:text-foreground hover:underline transition-colors">
+                {t("privacy")}
+              </Link>
+            </div>
+          )}
         </div>
       </aside>
     </TooltipProvider>
