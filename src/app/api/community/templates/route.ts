@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getUserPlan, canAccessProContent } from "@/lib/usage";
 import type {
   ListTemplatesParams,
   ListTemplatesResponse,
@@ -110,6 +111,10 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Check if user has PRO access
+    const userPlan = userId ? await getUserPlan(userId) : "FREE";
+    const userHasPro = canAccessProContent(userPlan);
+
     // Transform to add isLiked field
     const templatesWithLiked = templates.map((template) => ({
       ...template,
@@ -117,7 +122,7 @@ export async function GET(request: NextRequest) {
       likes: undefined, // Remove likes array from response
     }));
 
-    const response: ListTemplatesResponse = {
+    const response: ListTemplatesResponse & { userHasPro: boolean } = {
       templates: templatesWithLiked as any,
       pagination: {
         page,
@@ -125,6 +130,7 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / limit),
       },
+      userHasPro,
     };
 
     return NextResponse.json(response);

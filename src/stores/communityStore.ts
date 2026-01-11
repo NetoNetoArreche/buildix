@@ -29,6 +29,7 @@ interface CommunityState {
   filters: CommunityFilters;
   isLoading: boolean;
   error: string | null;
+  userHasPro: boolean;
 
   // Current template detail
   currentTemplate: TemplateDetail | null;
@@ -95,6 +96,7 @@ export const useCommunityStore = create<CommunityState>()(
     filters: { ...defaultFilters },
     isLoading: false,
     error: null,
+    userHasPro: false,
 
     currentTemplate: null,
     isLoadingTemplate: false,
@@ -245,6 +247,7 @@ export const useCommunityStore = create<CommunityState>()(
             state.templates.push(...data.templates);
           }
           state.pagination = data.pagination;
+          state.userHasPro = data.userHasPro || false;
           state.isLoading = false;
         });
       } catch (error) {

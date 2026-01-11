@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
+import { getUserPlan, canAccessProContent } from "@/lib/usage";
 import type { RemixResponse } from "@/types/community";
 
 // POST /api/community/templates/[slug]/remix - Remix (clone) a template
@@ -49,16 +50,16 @@ export async function POST(
 
     // Check if PRO template and user has access
     if (template.isPro) {
-      // TODO: Check if user has PRO subscription
-      // For now, just check if user is admin
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { role: true },
-      });
+      const userPlan = await getUserPlan(userId);
+      const hasPro = canAccessProContent(userPlan);
 
-      if (user?.role !== "admin") {
+      if (!hasPro) {
         return NextResponse.json(
-          { error: "PRO subscription required to remix this template" },
+          {
+            error: "PRO subscription required",
+            message: "Este template requer um plano PRO ou superior para remix.",
+            requiresUpgrade: true
+          },
           { status: 403 }
         );
       }

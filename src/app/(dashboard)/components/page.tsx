@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Loader2,
@@ -9,6 +10,8 @@ import {
   Check,
   Eye,
   Layers,
+  Lock,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +21,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { ComponentPreviewIframe } from "@/components/ui/component-preview-iframe";
 
@@ -47,12 +52,15 @@ const CATEGORIES = [
 ];
 
 export default function ComponentsPage() {
+  const router = useRouter();
   const [components, setComponents] = useState<UIComponent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("all");
   const [previewComponent, setPreviewComponent] = useState<UIComponent | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [userHasPro, setUserHasPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
     fetchComponents();
@@ -64,6 +72,7 @@ export default function ComponentsPage() {
       if (response.ok) {
         const data = await response.json();
         setComponents(data.components || []);
+        setUserHasPro(data.userHasPro || false);
       }
     } catch (error) {
       console.error("Failed to fetch components:", error);
@@ -73,6 +82,18 @@ export default function ComponentsPage() {
   };
 
   const handleCopyCode = async (component: UIComponent) => {
+    // Check if PRO component and user doesn't have PRO
+    if (component.isPro && !userHasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    // Check if code is empty (PRO component without access)
+    if (!component.code) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(component.code);
       setCopiedId(component.id);
@@ -160,86 +181,98 @@ export default function ComponentsPage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredComponents.map((component) => (
-            <div
-              key={component.id}
-              className="group rounded-xl border bg-card overflow-hidden transition-all hover:border-[hsl(var(--buildix-primary))]/50 hover:shadow-md"
-            >
-              {/* Preview */}
-              <div className="relative aspect-[4/3] bg-muted overflow-hidden">
-                <ComponentPreviewIframe
-                  code={component.code}
-                  className="h-full w-full"
-                />
+          {filteredComponents.map((component) => {
+            const isLocked = component.isPro && !userHasPro;
 
-                {/* PRO Badge */}
-                {component.isPro && (
-                  <div className="absolute left-2 top-2">
-                    <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-                      <Crown className="mr-1 h-3 w-3" />
-                      PRO
-                    </Badge>
-                  </div>
-                )}
+            return (
+              <div
+                key={component.id}
+                className="group rounded-xl border bg-card overflow-hidden transition-all hover:border-[hsl(var(--buildix-primary))]/50 hover:shadow-md"
+              >
+                {/* Preview - shows real component for all users */}
+                <div className="relative aspect-[4/3] bg-muted overflow-hidden">
+                  <ComponentPreviewIframe
+                    code={component.code}
+                    className="h-full w-full"
+                  />
 
-                {/* Hover Actions */}
-                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setPreviewComponent(component)}
-                  >
-                    <Eye className="mr-1 h-4 w-4" />
-                    Preview
-                  </Button>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => handleCopyCode(component)}
-                    className="bg-[hsl(var(--buildix-primary))] hover:bg-[hsl(var(--buildix-primary))]/90"
-                  >
-                    {copiedId === component.id ? (
-                      <>
-                        <Check className="mr-1 h-4 w-4" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="mr-1 h-4 w-4" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
+                  {/* PRO Badge */}
+                  {component.isPro && (
+                    <div className="absolute left-2 top-2">
+                      <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                        <Crown className="mr-1 h-3 w-3" />
+                        PRO
+                      </Badge>
+                    </div>
+                  )}
 
-              {/* Info */}
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium">{component.name}</h3>
-                    {component.description && (
-                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                        {component.description}
-                      </p>
-                    )}
+                  {/* Hover Actions */}
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/60 opacity-0 transition-opacity group-hover:opacity-100">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPreviewComponent(component)}
+                    >
+                      <Eye className="mr-1 h-4 w-4" />
+                      Preview
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleCopyCode(component)}
+                      className={isLocked
+                        ? "bg-amber-500 hover:bg-amber-600"
+                        : "bg-[hsl(var(--buildix-primary))] hover:bg-[hsl(var(--buildix-primary))]/90"
+                      }
+                    >
+                      {isLocked ? (
+                        <>
+                          <Lock className="mr-1 h-4 w-4" />
+                          Upgrade
+                        </>
+                      ) : copiedId === component.id ? (
+                        <>
+                          <Check className="mr-1 h-4 w-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="mr-1 h-4 w-4" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
                   </div>
                 </div>
 
-                {/* Tags */}
-                <div className="mt-3 flex flex-wrap gap-1">
-                  <Badge variant="secondary" className="text-xs">
-                    {component.category}
-                  </Badge>
-                  {component.tags.slice(0, 2).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
+                {/* Info */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-medium">{component.name}</h3>
+                      {component.description && (
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                          {component.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    <Badge variant="secondary" className="text-xs">
+                      {component.category}
                     </Badge>
-                  ))}
+                    {component.tags.slice(0, 2).map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -276,9 +309,18 @@ export default function ComponentsPage() {
             </Button>
             <Button
               onClick={() => previewComponent && handleCopyCode(previewComponent)}
-              className="bg-[hsl(var(--buildix-primary))] hover:bg-[hsl(var(--buildix-primary))]/90"
+              className={
+                previewComponent?.isPro && !userHasPro
+                  ? "bg-amber-500 hover:bg-amber-600"
+                  : "bg-[hsl(var(--buildix-primary))] hover:bg-[hsl(var(--buildix-primary))]/90"
+              }
             >
-              {copiedId === previewComponent?.id ? (
+              {previewComponent?.isPro && !userHasPro ? (
+                <>
+                  <Lock className="mr-1 h-4 w-4" />
+                  Upgrade to Copy
+                </>
+              ) : copiedId === previewComponent?.id ? (
                 <>
                   <Check className="mr-1 h-4 w-4" />
                   Copied!
@@ -291,6 +333,54 @@ export default function ComponentsPage() {
               )}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upgrade Modal */}
+      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-amber-500" />
+              Componente PRO
+            </DialogTitle>
+            <DialogDescription>
+              Este componente esta disponivel apenas para usuarios com plano PRO ou superior.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="rounded-lg bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4 border border-amber-500/20">
+              <h4 className="font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Beneficios do plano PRO
+              </h4>
+              <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                <li>• Acesso a todos os componentes PRO</li>
+                <li>• Templates exclusivos</li>
+                <li>• 120 prompts por mes</li>
+                <li>• Geracao de imagens AI</li>
+                <li>• Uso comercial</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowUpgradeModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                setShowUpgradeModal(false);
+                router.push("/pricing");
+              }}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+            >
+              <Crown className="mr-1 h-4 w-4" />
+              Ver Planos
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

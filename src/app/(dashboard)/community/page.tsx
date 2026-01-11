@@ -19,6 +19,7 @@ import {
   Sparkles,
   ExternalLink,
   Loader2,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ export default function CommunityPage() {
   const templates = useCommunityStore((state) => state.templates);
   const pagination = useCommunityStore((state) => state.pagination);
   const storeIsLoading = useCommunityStore((state) => state.isLoading);
+  const userHasPro = useCommunityStore((state) => state.userHasPro);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<TemplateCategory | "all">("all");
@@ -168,6 +170,12 @@ export default function CommunityPage() {
   const handleRemix = async (template: TemplateWithAuthor) => {
     if (!session?.user) {
       // TODO: Show login modal
+      return;
+    }
+
+    // Check if PRO template and user doesn't have PRO
+    if (template.isPro && !userHasPro) {
+      router.push("/pricing");
       return;
     }
 
@@ -296,6 +304,7 @@ export default function CommunityPage() {
                 onRemix={() => handleRemix(template)}
                 onLike={(e) => handleLike(template, e)}
                 isLoggedIn={!!session?.user}
+                userHasPro={userHasPro}
               />
             ))}
           </div>
@@ -395,6 +404,7 @@ interface CommunityTemplateCardProps {
   onRemix: () => void;
   onLike: (e: React.MouseEvent) => void;
   isLoggedIn: boolean;
+  userHasPro: boolean;
 }
 
 function CommunityTemplateCard({
@@ -403,7 +413,9 @@ function CommunityTemplateCard({
   onRemix,
   onLike,
   isLoggedIn,
+  userHasPro,
 }: CommunityTemplateCardProps) {
+  const isLocked = template.isPro && !userHasPro;
   const author = template.project?.user;
   const authorName = author?.displayName || author?.name || "Anonymous";
   const authorInitial = authorName.charAt(0).toUpperCase();
@@ -449,13 +461,25 @@ function CommunityTemplateCard({
             Preview
           </Button>
           <Button
-            variant="buildix"
             size="sm"
             onClick={onRemix}
             disabled={!isLoggedIn}
+            className={isLocked
+              ? "bg-amber-500 hover:bg-amber-600 text-white"
+              : "bg-[hsl(var(--buildix-primary))] hover:bg-[hsl(var(--buildix-primary))]/90 text-white"
+            }
           >
-            <Play className="mr-1.5 h-3.5 w-3.5" />
-            Remix
+            {isLocked ? (
+              <>
+                <Lock className="mr-1.5 h-3.5 w-3.5" />
+                Upgrade
+              </>
+            ) : (
+              <>
+                <Play className="mr-1.5 h-3.5 w-3.5" />
+                Remix
+              </>
+            )}
           </Button>
         </div>
       </div>

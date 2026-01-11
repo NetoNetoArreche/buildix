@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { auth } from "@/lib/auth";
+import { getUserPlan, canAccessProContent } from "@/lib/usage";
 
 // GET a single component by ID
 export async function GET(
@@ -19,6 +21,7 @@ export async function GET(
         code: true,
         tags: true,
         charCount: true,
+        isPro: true,
       },
     });
 
@@ -29,7 +32,15 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ component });
+    // Check user's PRO status and include it in response
+    // Code is returned for preview, but frontend blocks copying for FREE users
+    const session = await auth();
+    const userPlan = session?.user?.id
+      ? await getUserPlan(session.user.id)
+      : "FREE";
+    const userHasPro = canAccessProContent(userPlan);
+
+    return NextResponse.json({ component, userHasPro });
   } catch (error) {
     console.error("Failed to fetch component:", error);
     return NextResponse.json(

@@ -1,11 +1,11 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { LanguageSelector } from "./language-selector";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface HeaderProps {
   title?: string;
@@ -32,12 +32,7 @@ export function Header({ title }: HeaderProps) {
       {/* Right side - Actions */}
       <div className="flex items-center gap-2">
         <LanguageSelector />
-
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[hsl(var(--buildix-primary))]" />
-        </Button>
-
+        <NotificationBell />
         <UserMenu />
       </div>
     </header>
