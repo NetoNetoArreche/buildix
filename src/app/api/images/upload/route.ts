@@ -4,6 +4,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { getUserPlan } from "@/lib/usage";
+import { getPlanLimits } from "@/lib/plans";
 
 // Initialize S3 client only if credentials are available
 const getS3Client = () => {
@@ -33,6 +35,29 @@ export async function GET(req: NextRequest) {
   const user = await getAuthenticatedUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Check upload limit based on user's plan
+  const plan = await getUserPlan(user.id);
+  const limits = getPlanLimits(plan);
+
+  if (limits.imageUploadsLimit !== -1) {
+    const currentCount = await prisma.userImage.count({
+      where: { userId: user.id }
+    });
+
+    if (currentCount >= limits.imageUploadsLimit) {
+      return NextResponse.json(
+        {
+          error: "Upload limit reached",
+          code: "UPLOAD_LIMIT_REACHED",
+          current: currentCount,
+          limit: limits.imageUploadsLimit,
+          plan
+        },
+        { status: 403 }
+      );
+    }
   }
 
   const { searchParams } = new URL(req.url);

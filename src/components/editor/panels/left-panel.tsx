@@ -42,10 +42,12 @@ import {
 import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore } from "@/stores/editorStore";
 import { useAI } from "@/hooks/useAI";
+import { useAITerms } from "@/hooks/useAITerms";
 import { useProject } from "@/hooks/useProject";
 import { PromptBuilder } from "@/components/prompt/prompt-builder";
 import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal";
 import { FigmaImportModal } from "@/components/editor/modals/FigmaImportModal";
+import { AITermsModal } from "@/components/editor/ai-terms-modal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
 import { TemplateTag } from "@/components/editor/chat/TemplateTag";
@@ -94,6 +96,7 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
     setViewMode,
   } = useEditorStore();
   const { generate, error: aiError } = useAI();
+  const { checkTerms, showTermsModal, handleTermsAccept } = useAITerms();
   const { savePage, saveChat, updateProject, createPage } = useProject();
 
   const [prompt, setPrompt] = useState("");
@@ -520,6 +523,13 @@ export function LeftPanel({ projectId, project }: LeftPanelProps) {
 
   const handleSend = async () => {
     if (!prompt.trim() || isGenerating) return;
+
+    // Check if user has accepted AI terms (required for paid plans)
+    const canProceed = await checkTerms();
+    if (!canProceed) {
+      // Modal will be shown by the hook
+      return;
+    }
 
     // Build the full prompt with snippets and components
     let fullPrompt = prompt;
@@ -1360,6 +1370,12 @@ NEW PAGE NAME: ${extractedPageName || 'new page'}
       <FigmaImportModal
         open={isFigmaModalOpen}
         onOpenChange={setIsFigmaModalOpen}
+      />
+
+      {/* AI Terms Modal - appears for paid plans on first AI use */}
+      <AITermsModal
+        open={showTermsModal}
+        onAccept={handleTermsAccept}
       />
     </>
   );

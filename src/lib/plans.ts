@@ -9,6 +9,7 @@ export interface PlanLimits {
   figmaExportsPerMonth: number;
   htmlExportsPerMonth: number; // -1 = ilimitado
   pagesPerProject: number; // -1 = ilimitado
+  imageUploadsLimit: number; // -1 = ilimitado (quantidade máxima de uploads do PC)
 }
 
 export interface PlanFeature {
@@ -44,6 +45,7 @@ export const PLANS: Record<PlanType, Plan> = {
       figmaExportsPerMonth: 0,
       htmlExportsPerMonth: 2,
       pagesPerProject: 2,
+      imageUploadsLimit: 20,
     },
     features: [
       { name: "5 prompts por mês", included: true },
@@ -70,6 +72,7 @@ export const PLANS: Record<PlanType, Plan> = {
       figmaExportsPerMonth: 20,
       htmlExportsPerMonth: -1, // ilimitado
       pagesPerProject: 100,
+      imageUploadsLimit: 200,
     },
     features: [
       { name: "120 prompts por mês", included: true },
@@ -98,6 +101,7 @@ export const PLANS: Record<PlanType, Plan> = {
       figmaExportsPerMonth: 50,
       htmlExportsPerMonth: -1, // ilimitado
       pagesPerProject: 100,
+      imageUploadsLimit: 500,
     },
     features: [
       { name: "240 prompts por mês", included: true },
@@ -124,6 +128,7 @@ export const PLANS: Record<PlanType, Plan> = {
       figmaExportsPerMonth: 100,
       htmlExportsPerMonth: -1, // ilimitado
       pagesPerProject: -1, // ilimitado
+      imageUploadsLimit: -1, // ilimitado
     },
     features: [
       { name: "560 prompts por mês", included: true },

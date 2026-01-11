@@ -77,6 +77,9 @@ model User {
   figmaTokenExpiry  DateTime? @map("figma_token_expiry")
   figmaUserId       String?   @map("figma_user_id") // Figma user ID for reference
 
+  // AI Terms acceptance (for paid plans - refund policy compliance)
+  aiTermsAcceptedAt DateTime? @map("ai_terms_accepted_at")
+
   // Relations
   accounts Account[]
   sessions Session[]
@@ -92,6 +95,12 @@ model User {
   // Subscription & Usage
   subscription Subscription?
   usages       Usage[]
+
+  // Feedback
+  feedbacks Feedback[]
+
+  // Notifications
+  notifications Notification[]
 
   @@map("users")
 }
@@ -476,4 +485,71 @@ model SiteSettings {
   updatedBy          String?  // ID do admin que alterou
 
   @@map("site_settings")
+}
+
+// ============================================
+// NOTIFICATION MODEL
+// ============================================
+
+// Notification - system notifications for users
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?  // null = broadcast to all users
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String   // "changelog" | "admin_notice" | "feedback_reply" | "system"
+  title     String
+  message   String   @db.Text
+  link      String?  // Optional link to navigate to
+
+  // For broadcast notifications, track who has read it
+  isGlobal  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+
+  // Track read status per user
+  readBy    NotificationRead[]
+
+  @@index([userId, createdAt])
+  @@index([isGlobal, createdAt])
+  @@map("notifications")
+}
+
+// NotificationRead - tracks which users have read which notifications
+model NotificationRead {
+  id             String       @id @default(cuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String
+  readAt         DateTime     @default(now())
+
+  @@unique([notificationId, userId])
+  @@index([userId])
+  @@map("notification_reads")
+}
+
+// ============================================
+// FEEDBACK MODEL
+// ============================================
+
+// Feedback - user feedback and suggestions
+model Feedback {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  category    String   // "bug" | "feature" | "improvement" | "other"
+  title       String
+  description String   @db.Text
+
+  status      String   @default("open") // "open" | "in_review" | "planned" | "completed" | "rejected"
+  adminNotes  String?  @db.Text // Internal admin notes
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([category])
+  @@map("feedbacks")
 }

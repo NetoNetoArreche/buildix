@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Upload, Loader2, Trash2, Pencil, ArrowLeft, Wand2, Check } from "lucide-react";
+import { Upload, Loader2, Trash2, Pencil, ArrowLeft, Wand2, Check, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 // Valid image magic bytes signatures
 const IMAGE_SIGNATURES = {
@@ -79,6 +81,28 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
   // Upload error state
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Upload usage state
+  const [uploadUsage, setUploadUsage] = useState<{
+    used: number;
+    limit: number;
+    remaining: number;
+    isUnlimited: boolean;
+    isLimitReached: boolean;
+  } | null>(null);
+
+  // Fetch upload usage
+  const fetchUploadUsage = useCallback(async () => {
+    try {
+      const response = await fetch("/api/images/usage");
+      if (response.ok) {
+        const data = await response.json();
+        setUploadUsage(data.uploads);
+      }
+    } catch (error) {
+      console.error("Failed to fetch upload usage:", error);
+    }
+  }, []);
+
   const fetchImages = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -96,7 +120,8 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
 
   useEffect(() => {
     fetchImages();
-  }, [fetchImages]);
+    fetchUploadUsage();
+  }, [fetchImages, fetchUploadUsage]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -118,6 +143,24 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
         const presignedResponse = await fetch(
           `/api/images/upload?fileName=${encodeURIComponent(file.name)}&fileType=${encodeURIComponent(file.type)}`
         );
+
+        // Check for upload limit error
+        if (presignedResponse.status === 403) {
+          const errorData = await presignedResponse.json();
+          if (errorData.code === "UPLOAD_LIMIT_REACHED") {
+            setUploadError(`Limite de uploads atingido (${errorData.limit} imagens). Faça upgrade para continuar.`);
+            break;
+          }
+          setUploadError(errorData.error || "Upload not allowed");
+          break;
+        }
+
+        if (!presignedResponse.ok) {
+          const errorData = await presignedResponse.json();
+          setUploadError(errorData.error || "Failed to get upload URL");
+          continue;
+        }
+
         const { presignedUrl, key, publicUrl } = await presignedResponse.json();
 
         // 2. Upload to S3
@@ -143,10 +186,12 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
         });
       }
 
-      // Refresh image list
+      // Refresh image list and usage
       await fetchImages();
+      await fetchUploadUsage();
     } catch (error) {
       console.error("Upload failed:", error);
+      setUploadError("Upload failed. Please try again.");
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -178,6 +223,8 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
         setSelectedId(null);
         setSelectedImage(null);
       }
+      // Refresh usage after delete
+      await fetchUploadUsage();
     } catch (error) {
       console.error("Failed to delete image:", error);
     }
@@ -335,6 +382,34 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
 
   return (
     <div className="h-full flex flex-col">
+      {/* Upload Usage Indicator */}
+      {uploadUsage && !uploadUsage.isUnlimited && (
+        <div className="mb-3 p-3 rounded-lg bg-muted/50 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Imagens enviadas</span>
+            <span className={cn(
+              "font-medium",
+              uploadUsage.isLimitReached ? "text-destructive" : "text-foreground"
+            )}>
+              {uploadUsage.used}/{uploadUsage.limit}
+            </span>
+          </div>
+          <Progress
+            value={(uploadUsage.used / uploadUsage.limit) * 100}
+            className={cn(
+              "h-1.5",
+              uploadUsage.isLimitReached && "[&>div]:bg-destructive"
+            )}
+          />
+          {uploadUsage.isLimitReached && (
+            <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+              <Crown className="h-3 w-3" />
+              <span>Faça upgrade para mais uploads</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Upload Area */}
       <div className="mb-4">
         <input
@@ -347,14 +422,25 @@ export function MyImagesTab({ onSelect }: MyImagesTabProps) {
         />
         <Button
           variant="outline"
-          className="w-full h-20 border-dashed flex flex-col gap-1"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
+          className={cn(
+            "w-full h-20 border-dashed flex flex-col gap-1",
+            uploadUsage?.isLimitReached && "opacity-50 cursor-not-allowed"
+          )}
+          onClick={() => !uploadUsage?.isLimitReached && fileInputRef.current?.click()}
+          disabled={isUploading || uploadUsage?.isLimitReached}
         >
           {isUploading ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm">Uploading...</span>
+            </>
+          ) : uploadUsage?.isLimitReached ? (
+            <>
+              <Crown className="h-5 w-5 text-amber-500" />
+              <span className="text-sm">Limite de uploads atingido</span>
+              <span className="text-xs text-muted-foreground">
+                Faça upgrade para continuar
+              </span>
             </>
           ) : (
             <>

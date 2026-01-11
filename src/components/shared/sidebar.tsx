@@ -17,6 +17,7 @@ import {
   Layers,
   GraduationCap,
   History,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,11 @@ const bottomNavItems = [
     titleKey: "changelog",
     href: "/changelog",
     icon: History,
+  },
+  {
+    titleKey: "feedback",
+    href: "/feedback",
+    icon: MessageSquare,
   },
   {
     titleKey: "pricing",

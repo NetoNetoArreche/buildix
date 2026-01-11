@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/shared/sidebar";
 import { Header } from "@/components/shared/header";
+import { FeedbackButtonWrapper } from "@/components/feedback";
 import { auth } from "@/lib/auth";
 import { isMaintenanceMode } from "@/lib/maintenance";
 
@@ -30,6 +31,7 @@ export default async function DashboardLayout({
           {children}
         </main>
       </div>
+      <FeedbackButtonWrapper />
     </div>
   );
 }

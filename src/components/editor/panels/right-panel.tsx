@@ -40,9 +40,11 @@ import { useUIStore } from "@/stores/uiStore";
 import { useEditorStore, type SelectedElementData } from "@/stores/editorStore";
 import { Plus } from "lucide-react";
 import { useAI } from "@/hooks/useAI";
+import { useAITerms } from "@/hooks/useAITerms";
 import { useProject } from "@/hooks/useProject";
 import { cn, getPreviewIframe } from "@/lib/utils";
 import { CodeSnippetsModal } from "@/components/editor/modals/CodeSnippetsModal";
+import { AITermsModal } from "@/components/editor/ai-terms-modal";
 import { SnippetTag } from "@/components/editor/chat/SnippetTag";
 import { ComponentTag } from "@/components/editor/chat/ComponentTag";
 import { TemplateTag } from "@/components/editor/chat/TemplateTag";
@@ -134,6 +136,7 @@ export function RightPanel({ projectId }: RightPanelProps) {
   const { selectedElementId, selectedElementData, viewMode, isGenerating, htmlContent, setHtmlContent, currentPage, insertAfterMode, insertAfterElementId, insertAfterElementHtml, setInsertAfterMode, deleteSelectedElement } = useEditorStore();
   const { isOpen: canvasModeOpen } = useCanvasModeStore();
   const { generate } = useAI();
+  const { checkTerms, showTermsModal, handleTermsAccept } = useAITerms();
   const { savePage } = useProject();
   const [activeTab, setActiveTab] = useState<TabType>("edit");
   const [prompt, setPrompt] = useState("");
@@ -157,6 +160,13 @@ export function RightPanel({ projectId }: RightPanelProps) {
     // For insert mode, we don't need selectedElementData
     if (!prompt.trim() || isGenerating) return;
     if (!isInsertMode && !selectedElementData) return;
+
+    // Check if user has accepted AI terms (required for paid plans)
+    const canProceed = await checkTerms();
+    if (!canProceed) {
+      // Modal will be shown by the hook
+      return;
+    }
 
     // Build context from snippets and components
     let contextCode = "";
@@ -440,7 +450,7 @@ export function RightPanel({ projectId }: RightPanelProps) {
     } else {
       console.error("[AI Edit] No result returned from AI");
     }
-  }, [prompt, selectedElementData, isGenerating, generate, setHtmlContent, projectId, currentPage?.id, savePage, insertAfterMode, insertAfterElementId, insertAfterElementHtml, setInsertAfterMode, htmlContent]);
+  }, [prompt, selectedElementData, isGenerating, generate, setHtmlContent, projectId, currentPage?.id, savePage, insertAfterMode, insertAfterElementId, insertAfterElementHtml, setInsertAfterMode, htmlContent, checkTerms]);
 
   if (!rightPanelOpen) {
     return (
@@ -601,6 +611,12 @@ export function RightPanel({ projectId }: RightPanelProps) {
           </ScrollArea>
         </>
       ) : null}
+
+      {/* AI Terms Modal - appears for paid plans on first AI use */}
+      <AITermsModal
+        open={showTermsModal}
+        onAccept={handleTermsAccept}
+      />
     </div>
   );
 }

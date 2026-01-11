@@ -87,6 +87,13 @@ const featureCategories = [
         MAX: "100",
         ULTRA: "Ilimitado",
       },
+      {
+        name: "Upload de imagens",
+        FREE: "20",
+        PRO: "200",
+        MAX: "500",
+        ULTRA: "Ilimitado",
+      },
     ],
   },
   {
