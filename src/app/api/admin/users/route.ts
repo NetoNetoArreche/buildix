@@ -28,6 +28,10 @@ export async function GET(request: NextRequest) {
     ];
   }
 
+  // Get first day of current month for usage query
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
   const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
@@ -42,19 +46,49 @@ export async function GET(request: NextRequest) {
         role: true,
         createdAt: true,
         updatedAt: true,
+        // AI Terms acceptance fields (for refund compliance)
+        aiTermsAcceptedAt: true,
+        aiTermsAcceptedIp: true,
+        aiTermsAcceptedUserAgent: true,
         _count: {
           select: {
             projects: true,
             images: true,
           },
         },
+        // Subscription info
+        subscription: {
+          select: {
+            plan: true,
+            status: true,
+          },
+        },
+        // Current month usage
+        usages: {
+          where: {
+            periodStart: { gte: startOfMonth },
+          },
+          select: {
+            promptsUsed: true,
+            imagesGenerated: true,
+          },
+          take: 1,
+        },
       },
     }),
     prisma.user.count({ where }),
   ]);
 
+  // Map users to include plan and usage info
+  const mappedUsers = users.map((user) => ({
+    ...user,
+    plan: user.subscription?.status === "ACTIVE" ? user.subscription.plan : "FREE",
+    promptsUsed: user.usages[0]?.promptsUsed || 0,
+    imagesGenerated: user.usages[0]?.imagesGenerated || 0,
+  }));
+
   return NextResponse.json({
-    users,
+    users: mappedUsers,
     pagination: {
       page,
       limit,

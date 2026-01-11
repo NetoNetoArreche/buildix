@@ -12,6 +12,10 @@ import {
   User as UserIcon,
   FolderOpen,
   Image as ImageIcon,
+  CheckCircle,
+  XCircle,
+  Sparkles,
+  Crown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +62,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AdminUser {
   id: string;
@@ -67,6 +77,14 @@ interface AdminUser {
   role: string;
   createdAt: string;
   updatedAt: string;
+  // AI Terms acceptance fields
+  aiTermsAcceptedAt: string | null;
+  aiTermsAcceptedIp: string | null;
+  aiTermsAcceptedUserAgent: string | null;
+  // Subscription and usage
+  plan: string;
+  promptsUsed: number;
+  imagesGenerated: number;
   _count: {
     projects: number;
     images: number;
@@ -302,8 +320,10 @@ export default function AdminUsersPage() {
                 <TableHead className="text-zinc-400">User</TableHead>
                 <TableHead className="text-zinc-400">Email</TableHead>
                 <TableHead className="text-zinc-400">Role</TableHead>
+                <TableHead className="text-zinc-400">Plan</TableHead>
+                <TableHead className="text-zinc-400">AI Used</TableHead>
+                <TableHead className="text-zinc-400">AI Terms</TableHead>
                 <TableHead className="text-zinc-400">Projects</TableHead>
-                <TableHead className="text-zinc-400">Images</TableHead>
                 <TableHead className="text-zinc-400">Created</TableHead>
                 <TableHead className="text-zinc-400 w-[50px]"></TableHead>
               </TableRow>
@@ -346,15 +366,72 @@ export default function AdminUsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1 text-zinc-400">
-                      <FolderOpen className="h-4 w-4" />
-                      <span>{user._count.projects}</span>
-                    </div>
+                    <Badge
+                      variant="secondary"
+                      className={
+                        user.plan === "ULTRA"
+                          ? "bg-violet-500/20 text-violet-400 border-violet-500/30"
+                          : user.plan === "MAX"
+                          ? "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                          : user.plan === "PRO"
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          : "bg-zinc-700 text-zinc-400"
+                      }
+                    >
+                      {user.plan !== "FREE" && (
+                        <Crown className="h-3 w-3 mr-1" />
+                      )}
+                      {user.plan}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1 text-zinc-400">
-                      <ImageIcon className="h-4 w-4" />
-                      <span>{user._count.images}</span>
+                      <Sparkles className="h-4 w-4" />
+                      <span>{user.promptsUsed}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            {user.aiTermsAcceptedAt ? (
+                              <Badge className="bg-green-500/20 text-green-400 border-green-500/30 cursor-help">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Aceito
+                              </Badge>
+                            ) : user.plan === "FREE" ? (
+                              <Badge variant="outline" className="text-zinc-500 border-zinc-600">
+                                N/A
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Pendente
+                              </Badge>
+                            )}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          {user.aiTermsAcceptedAt ? (
+                            <div className="text-xs space-y-1">
+                              <p><strong>Aceito em:</strong> {formatDate(user.aiTermsAcceptedAt)}</p>
+                              <p><strong>IP:</strong> {user.aiTermsAcceptedIp || "N/A"}</p>
+                              <p className="text-green-400 font-medium">Nao elegivel para reembolso</p>
+                            </div>
+                          ) : user.plan === "FREE" ? (
+                            <p className="text-xs">Plano FREE nao requer aceite de termos de IA</p>
+                          ) : (
+                            <p className="text-xs text-amber-400">Usuario ainda nao aceitou os termos de IA</p>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 text-zinc-400">
+                      <FolderOpen className="h-4 w-4" />
+                      <span>{user._count.projects}</span>
                     </div>
                   </TableCell>
                   <TableCell className="text-zinc-400">

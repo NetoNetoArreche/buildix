@@ -78,7 +78,9 @@ model User {
   figmaUserId       String?   @map("figma_user_id") // Figma user ID for reference
 
   // AI Terms acceptance (for paid plans - refund policy compliance)
-  aiTermsAcceptedAt DateTime? @map("ai_terms_accepted_at")
+  aiTermsAcceptedAt        DateTime? @map("ai_terms_accepted_at")
+  aiTermsAcceptedIp        String?   @map("ai_terms_accepted_ip")
+  aiTermsAcceptedUserAgent String?   @map("ai_terms_accepted_user_agent") @db.Text
 
   // Relations
   accounts Account[]

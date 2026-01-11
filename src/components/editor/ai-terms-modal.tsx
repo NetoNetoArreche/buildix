@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AlertTriangle, Shield, FileText } from "lucide-react";
 
 interface AITermsModalProps {
@@ -20,10 +22,14 @@ interface AITermsModalProps {
 
 export function AITermsModal({ open, onAccept }: AITermsModalProps) {
   const [accepted, setAccepted] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Usuário deve marcar checkbox E digitar "ACEITO"
+  const canAccept = accepted && confirmText.toUpperCase() === "ACEITO";
+
   const handleAccept = async () => {
-    if (!accepted) return;
+    if (!canAccept) return;
 
     setLoading(true);
     try {
@@ -96,25 +102,41 @@ export function AITermsModal({ open, onAccept }: AITermsModalProps) {
           </div>
         </div>
 
-        <div className="flex items-start space-x-3 py-2">
-          <Checkbox
-            id="terms"
-            checked={accepted}
-            onCheckedChange={(checked) => setAccepted(checked === true)}
-            className="mt-0.5"
-          />
-          <label
-            htmlFor="terms"
-            className="text-sm font-medium leading-relaxed cursor-pointer select-none"
-          >
-            Li e aceito os termos de uso dos recursos de IA do Buildix
-          </label>
+        <div className="space-y-4">
+          <div className="flex items-start space-x-3">
+            <Checkbox
+              id="terms"
+              checked={accepted}
+              onCheckedChange={(checked) => setAccepted(checked === true)}
+              className="mt-0.5"
+            />
+            <label
+              htmlFor="terms"
+              className="text-sm font-medium leading-relaxed cursor-pointer select-none"
+            >
+              Li e aceito os termos de uso dos recursos de IA do Buildix
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm" className="text-sm">
+              Para confirmar, digite <strong className="text-primary">ACEITO</strong> abaixo:
+            </Label>
+            <Input
+              id="confirm"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="Digite ACEITO"
+              className="uppercase"
+              autoComplete="off"
+            />
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button
             onClick={handleAccept}
-            disabled={!accepted || loading}
+            disabled={!canAccept || loading}
             className="w-full sm:w-auto"
           >
             {loading ? (
