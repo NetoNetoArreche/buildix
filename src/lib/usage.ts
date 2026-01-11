@@ -64,7 +64,7 @@ async function getOrCreateCurrentUsage(userId: string) {
 }
 
 // Get user's subscription plan
-async function getUserPlan(userId: string): Promise<PlanType> {
+export async function getUserPlan(userId: string): Promise<PlanType> {
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
   });
@@ -74,6 +74,11 @@ async function getUserPlan(userId: string): Promise<PlanType> {
   }
 
   return subscription.plan;
+}
+
+// Check if user can access PRO content (components, templates, etc.)
+export function canAccessProContent(plan: PlanType): boolean {
+  return ["PRO", "MAX", "ULTRA"].includes(plan);
 }
 
 // Get complete usage info for a user
